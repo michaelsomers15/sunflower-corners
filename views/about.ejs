@@ -1,0 +1,35 @@
+<%- include('partials/header', { pageTitle: 'Our Farm' }) %>
+
+<section class="block tight">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">Our farm</span>
+      <h1>About Sunflower Corners</h1>
+    </div>
+    <div class="info-card" style="max-width: 760px;">
+      <p style="font-size: 1.05rem; white-space: pre-line;"><%= settings.about_text %></p>
+    </div>
+  </div>
+</section>
+
+<section class="block alt">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">What we grow</span>
+      <h2>From field to bag</h2>
+    </div>
+    <div class="product-grid" style="grid-template-columns: repeat(auto-fill, minmax(200px,1fr));">
+      <div class="info-card"><h3>Grains</h3><p style="color:var(--ink-soft); font-size:0.92rem;">Rye, corn, and oats grown and cleaned on-site.</p></div>
+      <div class="info-card"><h3>Sunflower Seed</h3><p style="color:var(--ink-soft); font-size:0.92rem;">Our namesake crop — bagged for feed or planting.</p></div>
+      <div class="info-card"><h3>Maple Syrup</h3><p style="color:var(--ink-soft); font-size:0.92rem;">Tapped and boiled the old-fashioned way.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="block tight">
+  <div class="wrap" style="text-align:center;">
+    <a href="/products" class="btn btn-primary">See current inventory</a>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

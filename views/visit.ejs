@@ -1,0 +1,51 @@
+<%- include('partials/header', { pageTitle: 'Visit & Contact' }) %>
+
+<section class="block tight">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">Come see us</span>
+      <h1>Visit &amp; Contact</h1>
+    </div>
+
+    <div class="two-col">
+      <div class="info-card">
+        <h3>Location</h3>
+        <p>
+          <% if (settings.address_line1) { %><%= settings.address_line1 %><br><% } %>
+          <%= settings.address_line2 %>
+        </p>
+        <% if (settings.address_line1) { %>
+          <a class="btn btn-dark btn-sm" target="_blank" rel="noopener"
+             href="https://www.google.com/maps/search/?api=1&query=<%= encodeURIComponent((settings.address_line1 + ' ' + settings.address_line2)) %>">
+            Get Directions
+          </a>
+        <% } %>
+
+        <h3 style="margin-top: 28px;">Contact</h3>
+        <p>
+          <% if (settings.phone) { %>Phone: <a href="tel:<%= settings.phone.replace(/[^0-9+]/g, '') %>"><%= settings.phone %></a><br><% } %>
+          <% if (settings.email) { %>Email: <a href="mailto:<%= settings.email %>"><%= settings.email %></a><br><% } %>
+          <% if (settings.facebook_url) { %><a href="<%= settings.facebook_url %>" target="_blank" rel="noopener">Find us on Facebook</a><% } %>
+          <% if (!settings.phone && !settings.email && !settings.facebook_url) { %>Contact info coming soon.<% } %>
+        </p>
+      </div>
+
+      <div class="info-card">
+        <h3>Stand Hours</h3>
+        <table class="hours-table">
+          <% settings.hours.split('\n').forEach(function(line) {
+               var parts = line.split(':');
+          %>
+            <tr>
+              <td><%= parts[0] %></td>
+              <td><%= parts.slice(1).join(':').trim() %></td>
+            </tr>
+          <% }); %>
+        </table>
+        <p class="fine" style="color: var(--ink-soft); font-size: 0.82rem; margin-top: 14px;"><%= settings.visit_note %></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

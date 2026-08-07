@@ -1,0 +1,51 @@
+<%- include('../partials/admin-header', { pageTitle: 'Categories' }) %>
+
+<div class="admin-header-row">
+  <h1>Categories</h1>
+</div>
+
+<% if (error) { %><div class="alert alert-error"><%= error %></div><% } %>
+
+<div class="two-col">
+  <div class="card">
+    <table class="data-table">
+      <thead><tr><th>Name</th><th>Sort</th><th>Products</th><th></th></tr></thead>
+      <tbody>
+        <% if (categories.length === 0) { %>
+          <tr><td colspan="4"><div class="empty-state">No categories yet — add one to start grouping products (e.g. Grains, Seeds, Maple Syrup).</div></td></tr>
+        <% } %>
+        <% categories.forEach(function(c) { %>
+          <tr>
+            <td><strong><%= c.name %></strong></td>
+            <td class="mono"><%= c.sort_order %></td>
+            <td><%= c.product_count %></td>
+            <td>
+              <form method="POST" action="/admin/categories/<%= c.id %>/delete"
+                    onsubmit="return confirm('Delete category &quot;<%= c.name %>&quot;? Products in it will become uncategorized, not deleted.');">
+                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+              </form>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card card-pad">
+    <h3 style="margin-top:0;">Add category</h3>
+    <form class="stacked-form" method="POST" action="/admin/categories">
+      <div class="field">
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" required placeholder="e.g. Grains">
+      </div>
+      <div class="field">
+        <label for="sort_order">Sort order</label>
+        <input type="number" id="sort_order" name="sort_order" value="0">
+        <span class="hint">Lower numbers appear first on the Products page.</span>
+      </div>
+      <button type="submit" class="btn btn-primary">Add Category</button>
+    </form>
+  </div>
+</div>
+
+<%- include('../partials/admin-footer') %>

@@ -1,0 +1,88 @@
+<%- include('partials/header', { pageTitle: 'Home' }) %>
+
+<section class="hero">
+  <div class="wrap">
+    <div>
+      <span class="eyebrow">Custer, Wisconsin &middot; Family Farmstand</span>
+      <h1><%= settings.tagline %></h1>
+      <p class="lede"><%= settings.home_lede %></p>
+      <div class="hero-actions">
+        <a href="/products" class="btn btn-primary">See what's in stock</a>
+        <a href="/visit" class="btn btn-outline">Visit &amp; hours</a>
+      </div>
+    </div>
+    <div class="hero-logo-frame">
+      <img src="/images/logo.png" alt="Sunflower Corners Feed & Seed logo">
+    </div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">From the stand</span>
+      <h2>What's fresh right now</h2>
+    </div>
+
+    <% if (featured.length === 0) { %>
+      <div class="empty-state">Products will show up here as soon as they're added in the admin dashboard.</div>
+    <% } else { %>
+      <div class="product-grid">
+        <% featured.forEach(function(p) { %>
+          <div class="tag-card">
+            <% if (p.photo) { %>
+              <img class="tag-photo" src="/image/<%= p.id %>" alt="<%= p.name %>">
+            <% } else { %>
+              <div class="tag-photo-placeholder">No photo yet</div>
+            <% } %>
+            <div class="tag-body">
+              <% if (p.category_name) { %><span class="tag-category"><%= p.category_name %></span><% } %>
+              <h3><%= p.name %></h3>
+              <p class="tag-desc"><%= p.description %></p>
+              <div class="tag-footer">
+                <span class="tag-price">$<%= Number(p.price).toFixed(2) %><span class="tag-unit"><%= p.unit %></span></span>
+                <% if (p.in_stock) { %>
+                  <span class="stamp in-stock">In Stock</span>
+                <% } else { %>
+                  <span class="stamp out-of-stock">Sold Out</span>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        <% }); %>
+      </div>
+      <div style="text-align:center; margin-top: 34px;">
+        <a href="/products" class="btn btn-dark">View full product list</a>
+      </div>
+    <% } %>
+  </div>
+</section>
+
+<section class="block alt">
+  <div class="wrap two-col">
+    <div>
+      <div class="section-head">
+        <span class="kicker">Our story</span>
+        <h2>Grown and packed on the farm</h2>
+      </div>
+      <p><%= settings.about_text %></p>
+      <a href="/about" class="btn btn-dark" style="margin-top: 10px;">Read more about our farm</a>
+    </div>
+    <div class="info-card">
+      <h3>Stand Hours</h3>
+      <table class="hours-table">
+        <% settings.hours.split('\n').forEach(function(line) {
+             var parts = line.split(':');
+        %>
+          <tr>
+            <td><%= parts[0] %></td>
+            <td><%= parts.slice(1).join(':').trim() %></td>
+          </tr>
+        <% }); %>
+      </table>
+      <a href="/visit" class="btn btn-primary" style="margin-top: 18px; width: 100%; justify-content: center;">Get directions</a>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

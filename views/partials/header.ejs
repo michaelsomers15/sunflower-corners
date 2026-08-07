@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof pageTitle !== 'undefined' ? pageTitle + ' | ' : '' %><%= settings.farm_name %></title>
+  <meta name="description" content="<%= settings.tagline %>">
+  <link rel="icon" href="/images/logo.png">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap">
+    <a href="/" class="brand">
+      <img src="/images/logo.png" alt="<%= settings.farm_name %> logo">
+      <span class="brand-text">
+        <span class="name">Sunflower Corners</span>
+        <span class="place">Custer, Wisconsin</span>
+      </span>
+    </a>
+    <nav class="main-nav">
+      <a href="/" class="<%= page === 'home' ? 'active' : '' %>">Home</a>
+      <a href="/products" class="<%= page === 'products' ? 'active' : '' %>">Products</a>
+      <a href="/about" class="<%= page === 'about' ? 'active' : '' %>">Our Farm</a>
+      <a href="/visit" class="<%= page === 'visit' ? 'active' : '' %>">Visit &amp; Contact</a>
+    </nav>
+  </div>
+</header>

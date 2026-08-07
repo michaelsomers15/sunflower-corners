@@ -1,0 +1,87 @@
+<%- include('../partials/admin-header', { pageTitle: 'Products' }) %>
+
+<div class="admin-header-row">
+  <div>
+    <h1 style="margin-bottom:2px;">Products</h1>
+    <p style="color: var(--ink-soft); margin:0;">Tap "In Stock / Sold Out" to flip status instantly — no need to open the item.</p>
+  </div>
+  <a href="/admin/products/new" class="btn btn-primary">+ Add Product</a>
+</div>
+
+<div class="card">
+  <% if (products.length === 0) { %>
+    <div class="card-pad">
+      <div class="empty-state">No products yet. Click "Add Product" to create your first listing.</div>
+    </div>
+  <% } else { %>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Photo</th>
+          <th>Name</th>
+          <th>Category</th>
+          <th>Price</th>
+          <th>Status</th>
+          <th>Updated</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% products.forEach(function(p) { %>
+          <tr id="row-<%= p.id %>">
+            <td>
+              <% if (p.photo) { %>
+                <img class="thumb" src="/image/<%= p.id %>" alt="">
+              <% } else { %>
+                <span class="thumb-placeholder"></span>
+              <% } %>
+            </td>
+            <td><strong><%= p.name %></strong></td>
+            <td><%= p.category_name || '—' %></td>
+            <td class="mono">$<%= Number(p.price).toFixed(2) %> <span style="color:var(--ink-soft); font-size:0.8em;"><%= p.unit %></span></td>
+            <td>
+              <button type="button"
+                class="pill-toggle <%= p.in_stock ? 'on' : 'off' %>"
+                data-id="<%= p.id %>"
+                onclick="toggleStock(this)">
+                <%= p.in_stock ? 'In Stock' : 'Sold Out' %>
+              </button>
+            </td>
+            <td class="mono" style="font-size:0.78rem; color: var(--ink-soft);"><%= formatLocal(p.updated_at) %></td>
+            <td>
+              <div class="row-actions">
+                <a href="/admin/products/<%= p.id %>/edit" class="btn btn-dark btn-sm">Edit</a>
+                <form method="POST" action="/admin/products/<%= p.id %>/delete" onsubmit="return confirm('Delete &quot;<%= p.name %>&quot;? This cannot be undone.');">
+                  <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<script>
+async function toggleStock(btn) {
+  const id = btn.dataset.id;
+  btn.disabled = true;
+  try {
+    const res = await fetch('/admin/products/' + id + '/toggle-stock', { method: 'POST' });
+    if (!res.ok) throw new Error('Request failed');
+    const data = await res.json();
+    if (data.in_stock) {
+      btn.classList.remove('off'); btn.classList.add('on'); btn.textContent = 'In Stock';
+    } else {
+      btn.classList.remove('on'); btn.classList.add('off'); btn.textContent = 'Sold Out';
+    }
+  } catch (e) {
+    alert('Could not update stock status. Please try again.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+</script>
+
+<%- include('../partials/admin-footer') %>

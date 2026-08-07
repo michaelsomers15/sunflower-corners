@@ -1,0 +1,54 @@
+<%- include('../partials/admin-header', { pageTitle: 'Admin Users' }) %>
+
+<div class="admin-header-row">
+  <h1>Admin Users</h1>
+</div>
+
+<% if (error) { %><div class="alert alert-error"><%= error %></div><% } %>
+
+<div class="two-col">
+  <div class="card">
+    <table class="data-table">
+      <thead><tr><th>Name</th><th>Username</th><th>Last login</th><th></th></tr></thead>
+      <tbody>
+        <% users.forEach(function(u) { %>
+          <tr>
+            <td><strong><%= u.display_name %></strong><% if (u.id === currentId) { %> <span class="hint">(you)</span><% } %></td>
+            <td class="mono"><%= u.username %></td>
+            <td class="mono" style="font-size:0.8rem; color:var(--ink-soft);"><%= u.last_login_at ? formatLocal(u.last_login_at) : 'Never' %></td>
+            <td>
+              <% if (u.id !== currentId && users.length > 1) { %>
+                <form method="POST" action="/admin/users/<%= u.id %>/delete"
+                      onsubmit="return confirm('Remove login for &quot;<%= u.display_name %>&quot;?');">
+                  <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                </form>
+              <% } %>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card card-pad">
+    <h3 style="margin-top:0;">Add admin login</h3>
+    <form class="stacked-form" method="POST" action="/admin/users">
+      <div class="field">
+        <label for="display_name">Display name</label>
+        <input type="text" id="display_name" name="display_name" required placeholder="e.g. Mom">
+      </div>
+      <div class="field">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" required autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="password">Temporary password</label>
+        <input type="password" id="password" name="password" required minlength="8" autocomplete="new-password">
+        <span class="hint">At least 8 characters. Share it with them so they can log in and change it under "My Account."</span>
+      </div>
+      <button type="submit" class="btn btn-primary">Create Login</button>
+    </form>
+  </div>
+</div>
+
+<%- include('../partials/admin-footer') %>

@@ -1,0 +1,90 @@
+<%- include('partials/header', { pageTitle: 'Products' }) %>
+
+<section class="block tight">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">Farmstand inventory</span>
+      <h1>What we've got</h1>
+      <p style="color: var(--ink-soft); max-width: 60ch;"><%= settings.products_intro %></p>
+    </div>
+  </div>
+</section>
+
+<% if (byCategory.length === 0 && uncategorized.length === 0) { %>
+  <section class="block">
+    <div class="wrap">
+      <div class="empty-state">Nothing listed yet — check back soon.</div>
+    </div>
+  </section>
+<% } %>
+
+<% byCategory.forEach(function(cat) { %>
+  <section class="block tight">
+    <div class="wrap">
+      <div class="category-label">
+        <h2><%= cat.name %></h2>
+        <span class="rule"></span>
+        <span class="badge-count"><%= cat.products.length %> item<%= cat.products.length === 1 ? '' : 's' %></span>
+      </div>
+      <div class="product-grid">
+        <% cat.products.forEach(function(p) { %>
+          <div class="tag-card">
+            <% if (p.photo) { %>
+              <img class="tag-photo" src="/image/<%= p.id %>" alt="<%= p.name %>">
+            <% } else { %>
+              <div class="tag-photo-placeholder">No photo yet</div>
+            <% } %>
+            <div class="tag-body">
+              <h3><%= p.name %></h3>
+              <p class="tag-desc"><%= p.description %></p>
+              <div class="tag-footer">
+                <span class="tag-price">$<%= Number(p.price).toFixed(2) %><span class="tag-unit"><%= p.unit %></span></span>
+                <% if (p.in_stock) { %>
+                  <span class="stamp in-stock">In Stock</span>
+                <% } else { %>
+                  <span class="stamp out-of-stock">Sold Out</span>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        <% }); %>
+      </div>
+    </div>
+  </section>
+<% }); %>
+
+<% if (uncategorized.length > 0) { %>
+  <section class="block tight">
+    <div class="wrap">
+      <div class="category-label">
+        <h2>Other</h2>
+        <span class="rule"></span>
+      </div>
+      <div class="product-grid">
+        <% uncategorized.forEach(function(p) { %>
+          <div class="tag-card">
+            <% if (p.photo) { %>
+              <img class="tag-photo" src="/image/<%= p.id %>" alt="<%= p.name %>">
+            <% } else { %>
+              <div class="tag-photo-placeholder">No photo yet</div>
+            <% } %>
+            <div class="tag-body">
+              <h3><%= p.name %></h3>
+              <p class="tag-desc"><%= p.description %></p>
+              <div class="tag-footer">
+                <span class="tag-price">$<%= Number(p.price).toFixed(2) %><span class="tag-unit"><%= p.unit %></span></span>
+                <% if (p.in_stock) { %>
+                  <span class="stamp in-stock">In Stock</span>
+                <% } else { %>
+                  <span class="stamp out-of-stock">Sold Out</span>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        <% }); %>
+      </div>
+    </div>
+  </section>
+<% } %>
+
+<%- include('partials/footer') %>

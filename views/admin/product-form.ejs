@@ -1,0 +1,74 @@
+<%- include('../partials/admin-header', { pageTitle: product ? 'Edit Product' : 'Add Product' }) %>
+
+<div class="admin-header-row">
+  <h1><%= product ? 'Edit Product' : 'Add Product' %></h1>
+</div>
+
+<% if (error) { %><div class="alert alert-error"><%= error %></div><% } %>
+
+<div class="card card-pad">
+  <form class="stacked-form" method="POST"
+        action="<%= product ? '/admin/products/' + product.id : '/admin/products' %>"
+        enctype="multipart/form-data">
+
+    <div class="field">
+      <label for="name">Product name</label>
+      <input type="text" id="name" name="name" required value="<%= product ? product.name : '' %>" placeholder="e.g. Rye">
+    </div>
+
+    <div class="field">
+      <label for="category_id">Category</label>
+      <select id="category_id" name="category_id">
+        <option value="">— No category —</option>
+        <% categories.forEach(function(c) { %>
+          <option value="<%= c.id %>" <%= (product && product.category_id === c.id) ? 'selected' : '' %>><%= c.name %></option>
+        <% }); %>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="description">Description</label>
+      <textarea id="description" name="description" placeholder="A short description shown on the product listing."><%= product ? product.description : '' %></textarea>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label for="price">Price (USD)</label>
+        <input type="number" id="price" name="price" step="0.01" min="0" value="<%= product ? product.price : '0.00' %>">
+      </div>
+      <div class="field">
+        <label for="unit">Unit</label>
+        <input type="text" id="unit" name="unit" value="<%= product ? product.unit : 'per 50 lb bag' %>" placeholder="e.g. per 50 lb bag, per quart">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="photo">Photo</label>
+      <% if (product && product.photo) { %>
+        <img src="/image/<%= product.id %>" alt="" style="width:140px; border-radius:4px; border:1px solid var(--fieldstone-dark); margin-bottom:8px;">
+        <label class="checkbox-row"><input type="checkbox" name="remove_photo"> Remove current photo</label>
+      <% } %>
+      <input type="file" id="photo" name="photo" accept="image/png,image/jpeg,image/webp,image/gif">
+      <span class="hint">JPEG, PNG, WEBP, or GIF. Resized automatically. Max 5MB.</span>
+    </div>
+
+    <div class="field">
+      <label class="checkbox-row">
+        <input type="checkbox" name="in_stock" <%= (!product || product.in_stock) ? 'checked' : '' %>>
+        In stock
+      </label>
+    </div>
+
+    <div class="field">
+      <label for="sort_order">Sort order <span class="hint">(lower numbers show first within a category)</span></label>
+      <input type="number" id="sort_order" name="sort_order" value="<%= product ? product.sort_order : 0 %>">
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary"><%= product ? 'Save Changes' : 'Add Product' %></button>
+      <a href="/admin" class="btn btn-outline" style="color: var(--barn-green); border-color: var(--fieldstone-dark);">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<%- include('../partials/admin-footer') %>

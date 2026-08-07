@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof pageTitle !== 'undefined' ? pageTitle + ' | ' : '' %>Admin | Sunflower Corners</title>
+  <link rel="icon" href="/images/logo.png">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="admin-shell">
+<div class="admin-topbar">
+  <div class="wrap">
+    <a href="/admin" class="brand-mini">
+      <img src="/images/logo.png" alt="logo"> Sunflower Corners
+    </a>
+    <div class="admin-tabs">
+      <a href="/admin" class="<%= page === 'admin-dashboard' ? 'active' : '' %>">Products</a>
+      <a href="/admin/categories" class="<%= page === 'admin-categories' ? 'active' : '' %>">Categories</a>
+      <a href="/admin/settings" class="<%= page === 'admin-settings' ? 'active' : '' %>">Site Settings</a>
+      <a href="/admin/users" class="<%= page === 'admin-users' ? 'active' : '' %>">Admin Users</a>
+      <a href="/" target="_blank">View site &#8599;</a>
+    </div>
+    <div class="admin-user">
+      <a href="/admin/account" class="<%= page === 'admin-account' ? 'active' : '' %>" style="color: var(--fieldstone); text-decoration:none;">Hi, <%= adminName %></a>
+      <form action="/admin/logout" method="POST"><button class="link-btn" type="submit">Log out</button></form>
+    </div>
+  </div>
+</div>
+<main class="admin-main">
+  <div class="wrap">
