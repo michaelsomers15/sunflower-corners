@@ -178,6 +178,14 @@ router.post('/categories', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.post('/categories/:id', async (req, res, next) => {
+  try {
+    const { name, sort_order } = req.body;
+    await pool.query('UPDATE categories SET name = $1, sort_order = $2 WHERE id = $3', [name, sort_order || 0, req.params.id]);
+    res.redirect('/admin/categories');
+  } catch (err) { next(err); }
+});
+
 router.post('/categories/:id/delete', async (req, res, next) => {
   try {
     await pool.query('DELETE FROM categories WHERE id = $1', [req.params.id]);

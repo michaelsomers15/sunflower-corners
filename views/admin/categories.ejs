@@ -16,9 +16,21 @@
         <% } %>
         <% categories.forEach(function(c) { %>
           <tr>
-            <td><strong><%= c.name %></strong></td>
-            <td class="mono"><%= c.sort_order %></td>
-            <td><%= c.product_count %></td>
+            <form method="POST" action="/admin/categories/<%= c.id %>" style="display: contents;">
+              <td><input type="text" name="name" value="<%= c.name %>" required
+                style="font-family:'Inter',sans-serif; font-size:0.9rem; padding:6px 8px; border:1.5px solid var(--fieldstone-dark); border-radius:3px; background:var(--fieldstone); color:var(--ink); width:100%;"></td>
+              <td><input type="number" name="sort_order" value="<%= c.sort_order %>"
+                style="font-family:'Space Mono',monospace; font-size:0.85rem; padding:6px 8px; border:1.5px solid var(--fieldstone-dark); border-radius:3px; background:var(--fieldstone); color:var(--ink); width:70px;"></td>
+              <td><%= c.product_count %></td>
+              <td>
+                <div class="row-actions">
+                  <button type="submit" class="btn btn-dark btn-sm">Save</button>
+                </div>
+              </td>
+            </form>
+          </tr>
+          <tr>
+            <td colspan="3"></td>
             <td>
               <form method="POST" action="/admin/categories/<%= c.id %>/delete"
                     onsubmit="return confirm('Delete category &quot;<%= c.name %>&quot;? Products in it will become uncategorized, not deleted.');">
@@ -41,7 +53,7 @@
       <div class="field">
         <label for="sort_order">Sort order</label>
         <input type="number" id="sort_order" name="sort_order" value="0">
-        <span class="hint">Lower numbers appear first on the Products page.</span>
+        <span class="hint">Lower numbers appear first on the Products page. You can change this anytime — edit the number in the table on the left and click Save.</span>
       </div>
       <button type="submit" class="btn btn-primary">Add Category</button>
     </form>
