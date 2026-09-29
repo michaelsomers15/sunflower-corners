@@ -269,9 +269,11 @@ section.block.alt { background: var(--paper); }
 }
 .stamp.in-stock { color: var(--barn-green-light); }
 .stamp.out-of-stock { color: var(--rust); }
+.stamp.stamp-sm { font-size: 0.6rem; padding: 3px 7px; }
 
-/* Multi-size product listing (e.g. Oats 23 lb / 45 lb) */
-.variant-list { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+/* Multi-size product listing (e.g. Oats 23 lb / 45 lb) — same rubber-stamp
+   badge as the single-size card, just sized to sit inline per row. */
+.variant-list { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
 .variant-row {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   padding: 7px 0; border-bottom: 1px dashed var(--fieldstone-dark);
@@ -279,12 +281,6 @@ section.block.alt { background: var(--paper); }
 .variant-row:last-child { border-bottom: none; }
 .variant-label { font-size: 0.88rem; color: var(--ink); flex: 1; }
 .variant-price { font-family: 'Space Mono', monospace; font-weight: 700; font-size: 0.92rem; color: var(--barn-green); white-space: nowrap; }
-.variant-stock {
-  font-family: 'Space Mono', monospace; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.06em;
-  padding: 3px 8px; border-radius: 12px; white-space: nowrap;
-}
-.variant-stock.v-in { background: #d9ead0; color: #2c5e1a; }
-.variant-stock.v-out { background: #f2d6cd; color: var(--rust); }
 
 /* ---------- Category label (hand-painted sign feel) ---------- */
 

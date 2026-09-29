@@ -32,7 +32,11 @@ var variants = p.variants || [];
           <div class="variant-row">
             <span class="variant-label"><%= v.label %></span>
             <span class="variant-price">$<%= Number(v.price).toFixed(2) %></span>
-            <span class="variant-stock <%= v.in_stock ? 'v-in' : 'v-out' %>"><%= v.in_stock ? 'In Stock' : 'Sold Out' %></span>
+            <% if (v.in_stock) { %>
+              <span class="stamp stamp-sm in-stock">In Stock</span>
+            <% } else { %>
+              <span class="stamp stamp-sm out-of-stock">Sold Out</span>
+            <% } %>
           </div>
         <% }); %>
       </div>
