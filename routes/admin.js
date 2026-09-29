@@ -27,6 +27,31 @@ const loginLimiter = rateLimit({
   legacyHeaders: false
 });
 
+// Parses the JSON-encoded list of {label, price, in_stock} sent by the
+// product form's hidden "variants_json" field (built client-side from the
+// dynamic size rows). Falls back to a single default-priced variant if
+// nothing usable was submitted, so a product can never end up with zero
+// sizes.
+function parseVariants(raw) {
+  let list = [];
+  try {
+    list = JSON.parse(raw || '[]');
+  } catch (e) {
+    list = [];
+  }
+  const cleaned = list
+    .filter((v) => v && String(v.label || '').trim().length > 0)
+    .map((v) => ({
+      label: String(v.label).trim().slice(0, 80),
+      price: Number.parseFloat(v.price) || 0,
+      in_stock: v.in_stock === true || v.in_stock === 'true'
+    }));
+  if (cleaned.length === 0) {
+    cleaned.push({ label: 'each', price: 0, in_stock: true });
+  }
+  return cleaned;
+}
+
 // ---------- Login / Logout ----------
 
 router.get('/login', (req, res) => {
@@ -67,7 +92,12 @@ router.use(requireAuth);
 router.get('/', async (req, res, next) => {
   try {
     const { rows: products } = await pool.query(
-      `SELECT p.*, c.name AS category_name FROM products p
+      `SELECT p.*, c.name AS category_name,
+         COALESCE((
+           SELECT json_agg(json_build_object('id', v.id, 'label', v.label, 'price', v.price, 'in_stock', v.in_stock) ORDER BY v.sort_order, v.id)
+           FROM product_variants v WHERE v.product_id = p.id
+         ), '[]') AS variants
+       FROM products p
        LEFT JOIN categories c ON c.id = p.category_id
        ORDER BY c.sort_order ASC NULLS LAST, p.sort_order ASC, p.name ASC`
     );
@@ -77,15 +107,29 @@ router.get('/', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// Quick AJAX toggle of in-stock status from the dashboard.
-router.post('/products/:id/toggle-stock', async (req, res, next) => {
+// Quick AJAX toggle of in-stock status for one size/variant from the dashboard.
+router.post('/variants/:id/toggle-stock', async (req, res, next) => {
   try {
     const { rows } = await pool.query(
-      'UPDATE products SET in_stock = NOT in_stock, updated_at = now() WHERE id = $1 RETURNING in_stock',
+      'UPDATE product_variants SET in_stock = NOT in_stock, updated_at = now() WHERE id = $1 RETURNING in_stock',
       [req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: 'Not found' });
     res.json({ in_stock: rows[0].in_stock });
+  } catch (err) { next(err); }
+});
+
+// Quick AJAX toggle of public visibility from the dashboard — hides an item
+// (out of season, discontinued, on hold indefinitely) from the public site
+// without deleting it, so it's easy to bring back later.
+router.post('/products/:id/toggle-visible', async (req, res, next) => {
+  try {
+    const { rows } = await pool.query(
+      'UPDATE products SET visible = NOT visible, updated_at = now() WHERE id = $1 RETURNING visible',
+      [req.params.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Not found' });
+    res.json({ visible: rows[0].visible });
   } catch (err) { next(err); }
 });
 
@@ -94,60 +138,101 @@ router.post('/products/:id/toggle-stock', async (req, res, next) => {
 router.get('/products/new', async (req, res, next) => {
   try {
     const { rows: categories } = await pool.query('SELECT * FROM categories ORDER BY sort_order, name');
-    res.render('admin/product-form', { product: null, categories, error: null, page: 'admin-products' });
+    res.render('admin/product-form', { product: null, variants: [], categories, error: null, page: 'admin-products' });
   } catch (err) { next(err); }
 });
 
 router.post('/products', upload.single('photo'), async (req, res, next) => {
+  const client = await pool.connect();
   try {
-    const { name, category_id, description, price, unit, sort_order } = req.body;
-    const in_stock = req.body.in_stock === 'on';
+    const { name, category_id, description, sort_order } = req.body;
+    const visible = req.body.visible === 'on';
+    const variants = parseVariants(req.body.variants_json);
     let photo = null, photo_mime = null;
     if (req.file) {
       photo = await sharp(req.file.buffer).resize({ width: 1200, withoutEnlargement: true }).jpeg({ quality: 82 }).toBuffer();
       photo_mime = 'image/jpeg';
     }
-    await pool.query(
-      `INSERT INTO products (category_id, name, description, price, unit, in_stock, photo, photo_mime, sort_order)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-      [category_id || null, name, description, price || 0, unit || 'each', in_stock, photo, photo_mime, sort_order || 0]
+
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      `INSERT INTO products (category_id, name, description, visible, photo, photo_mime, sort_order)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+      [category_id || null, name, description, visible, photo, photo_mime, sort_order || 0]
     );
+    const productId = rows[0].id;
+    for (let i = 0; i < variants.length; i++) {
+      const v = variants[i];
+      await client.query(
+        `INSERT INTO product_variants (product_id, label, price, in_stock, sort_order) VALUES ($1,$2,$3,$4,$5)`,
+        [productId, v.label, v.price, v.in_stock, i]
+      );
+    }
+    await client.query('COMMIT');
     res.redirect('/admin');
-  } catch (err) { next(err); }
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
 });
 
 router.get('/products/:id/edit', async (req, res, next) => {
   try {
     const { rows } = await pool.query('SELECT * FROM products WHERE id = $1', [req.params.id]);
     if (!rows.length) return res.status(404).send('Product not found');
+    const { rows: variants } = await pool.query(
+      'SELECT * FROM product_variants WHERE product_id = $1 ORDER BY sort_order, id',
+      [req.params.id]
+    );
     const { rows: categories } = await pool.query('SELECT * FROM categories ORDER BY sort_order, name');
-    res.render('admin/product-form', { product: rows[0], categories, error: null, page: 'admin-products' });
+    res.render('admin/product-form', { product: rows[0], variants, categories, error: null, page: 'admin-products' });
   } catch (err) { next(err); }
 });
 
 router.post('/products/:id', upload.single('photo'), async (req, res, next) => {
+  const client = await pool.connect();
   try {
-    const { name, category_id, description, price, unit, sort_order, remove_photo } = req.body;
-    const in_stock = req.body.in_stock === 'on';
+    const { name, category_id, description, sort_order, remove_photo } = req.body;
+    const visible = req.body.visible === 'on';
+    const variants = parseVariants(req.body.variants_json);
 
-    const fields = [category_id || null, name, description, price || 0, unit || 'each', in_stock, sort_order || 0];
-    let query = `UPDATE products SET category_id=$1, name=$2, description=$3, price=$4, unit=$5, in_stock=$6, sort_order=$7, updated_at=now()`;
+    const fields = [category_id || null, name, description, visible, sort_order || 0];
+    let query = `UPDATE products SET category_id=$1, name=$2, description=$3, visible=$4, sort_order=$5, updated_at=now()`;
 
     if (req.file) {
       const photo = await sharp(req.file.buffer).resize({ width: 1200, withoutEnlargement: true }).jpeg({ quality: 82 }).toBuffer();
-      query += `, photo=$8, photo_mime=$9 WHERE id=$10`;
+      query += `, photo=$6, photo_mime=$7 WHERE id=$8`;
       fields.push(photo, 'image/jpeg', req.params.id);
     } else if (remove_photo === 'on') {
-      query += `, photo=NULL, photo_mime=NULL WHERE id=$8`;
+      query += `, photo=NULL, photo_mime=NULL WHERE id=$6`;
       fields.push(req.params.id);
     } else {
-      query += ` WHERE id=$8`;
+      query += ` WHERE id=$6`;
       fields.push(req.params.id);
     }
 
-    await pool.query(query, fields);
+    await client.query('BEGIN');
+    await client.query(query, fields);
+    // Replace the full variant set on every save — simplest way to handle
+    // added/removed/reordered sizes from one form submission.
+    await client.query('DELETE FROM product_variants WHERE product_id = $1', [req.params.id]);
+    for (let i = 0; i < variants.length; i++) {
+      const v = variants[i];
+      await client.query(
+        `INSERT INTO product_variants (product_id, label, price, in_stock, sort_order) VALUES ($1,$2,$3,$4,$5)`,
+        [req.params.id, v.label, v.price, v.in_stock, i]
+      );
+    }
+    await client.query('COMMIT');
     res.redirect('/admin');
-  } catch (err) { next(err); }
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
 });
 
 router.post('/products/:id/delete', async (req, res, next) => {

@@ -29,26 +29,7 @@
     <% } else { %>
       <div class="product-grid">
         <% featured.forEach(function(p) { %>
-          <div class="tag-card">
-            <% if (p.photo) { %>
-              <img class="tag-photo" src="/image/<%= p.id %>" alt="<%= p.name %>">
-            <% } else { %>
-              <div class="tag-photo-placeholder">No photo yet</div>
-            <% } %>
-            <div class="tag-body">
-              <% if (p.category_name) { %><span class="tag-category"><%= p.category_name %></span><% } %>
-              <h3><%= p.name %></h3>
-              <p class="tag-desc"><%= p.description %></p>
-              <div class="tag-footer">
-                <span class="tag-price">$<%= Number(p.price).toFixed(2) %><span class="tag-unit"><%= p.unit %></span></span>
-                <% if (p.in_stock) { %>
-                  <span class="stamp in-stock">In Stock</span>
-                <% } else { %>
-                  <span class="stamp out-of-stock">Sold Out</span>
-                <% } %>
-              </div>
-            </div>
-          </div>
+          <%- include('partials/product-card', { p: p }) %>
         <% }); %>
       </div>
       <div style="text-align:center; margin-top: 34px;">

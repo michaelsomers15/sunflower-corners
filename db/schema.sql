@@ -16,20 +16,53 @@ CREATE TABLE IF NOT EXISTS categories (
   sort_order INT DEFAULT 0
 );
 
+-- A "product" is the listing shown on the site (name, description, photo,
+-- category, visibility). Price/unit/stock live on product_variants below,
+-- so one product can carry multiple sizes (e.g. Oats — 23 lb / 45 lb bag),
+-- each with its own price and stock status, without duplicating the listing.
 CREATE TABLE IF NOT EXISTS products (
   id SERIAL PRIMARY KEY,
   category_id INT REFERENCES categories(id) ON DELETE SET NULL,
   name VARCHAR(150) NOT NULL,
   description TEXT,
-  price NUMERIC(10,2),
-  unit VARCHAR(50) NOT NULL DEFAULT 'each',
-  in_stock BOOLEAN NOT NULL DEFAULT true,
+  visible BOOLEAN NOT NULL DEFAULT true,
   photo BYTEA,
   photo_mime VARCHAR(50),
   sort_order INT DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  -- Legacy columns from the single-price version of this app. No longer
+  -- read or written by the app (all price/unit/stock data now lives in
+  -- product_variants) — kept only so upgrading an existing database never
+  -- requires a destructive column drop.
+  price NUMERIC(10,2),
+  unit VARCHAR(50) DEFAULT 'each',
+  in_stock BOOLEAN DEFAULT true
+);
+
+-- Backfill for databases created before the "visible" column existed.
+ALTER TABLE products ADD COLUMN IF NOT EXISTS visible BOOLEAN NOT NULL DEFAULT true;
+
+CREATE TABLE IF NOT EXISTS product_variants (
+  id SERIAL PRIMARY KEY,
+  product_id INT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  label VARCHAR(80) NOT NULL,       -- e.g. "23 lb bag", "45 lb bag", "per quart"
+  price NUMERIC(10,2) NOT NULL DEFAULT 0,
+  in_stock BOOLEAN NOT NULL DEFAULT true,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- One-time backfill: any product left over from the old single-price schema
+-- (or created before this migration ran) gets its old price/unit/in_stock
+-- turned into its first size/variant. Safe to run on every boot — it only
+-- inserts for a product that doesn't already have at least one variant, so
+-- it's a no-op once every product has been migrated.
+INSERT INTO product_variants (product_id, label, price, in_stock, sort_order)
+SELECT p.id, COALESCE(NULLIF(TRIM(p.unit), ''), 'each'), COALESCE(p.price, 0), COALESCE(p.in_stock, true), 0
+FROM products p
+WHERE NOT EXISTS (SELECT 1 FROM product_variants v WHERE v.product_id = p.id);
 
 -- Simple key/value store for site-wide settings (hours, address, phone, about text, etc.)
 CREATE TABLE IF NOT EXISTS site_settings (
@@ -38,4 +71,5 @@ CREATE TABLE IF NOT EXISTS site_settings (
 );
 
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
-CREATE INDEX IF NOT EXISTS idx_products_instock ON products(in_stock);
+CREATE INDEX IF NOT EXISTS idx_products_visible ON products(visible);
+CREATE INDEX IF NOT EXISTS idx_variants_product ON product_variants(product_id);

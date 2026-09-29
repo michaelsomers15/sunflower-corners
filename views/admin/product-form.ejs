@@ -7,13 +7,13 @@
 <% if (error) { %><div class="alert alert-error"><%= error %></div><% } %>
 
 <div class="card card-pad">
-  <form class="stacked-form" method="POST"
+  <form class="stacked-form" id="product-form" method="POST"
         action="<%= product ? '/admin/products/' + product.id : '/admin/products' %>"
         enctype="multipart/form-data">
 
     <div class="field">
       <label for="name">Product name</label>
-      <input type="text" id="name" name="name" required value="<%= product ? product.name : '' %>" placeholder="e.g. Rye">
+      <input type="text" id="name" name="name" required value="<%= product ? product.name : '' %>" placeholder="e.g. Oats">
     </div>
 
     <div class="field">
@@ -31,15 +31,13 @@
       <textarea id="description" name="description" placeholder="A short description shown on the product listing."><%= product ? product.description : '' %></textarea>
     </div>
 
-    <div class="row2">
-      <div class="field">
-        <label for="price">Price (USD)</label>
-        <input type="number" id="price" name="price" step="0.01" min="0" value="<%= product ? product.price : '0.00' %>">
-      </div>
-      <div class="field">
-        <label for="unit">Unit</label>
-        <input type="text" id="unit" name="unit" value="<%= product ? product.unit : 'per 50 lb bag' %>" placeholder="e.g. per 50 lb bag, per quart">
-      </div>
+    <div class="field">
+      <label>Sizes &amp; Pricing</label>
+      <span class="hint">Add one row per size you sell (e.g. "23 lb bag" and "45 lb bag"). Each size has its own price and its own In Stock / Sold Out status. One size is fine too — just leave a single row.</span>
+
+      <div id="variant-rows" style="display:flex; flex-direction:column; gap:10px; margin-top:6px;"></div>
+
+      <button type="button" id="add-variant-btn" class="btn btn-outline" style="align-self:flex-start; color: var(--barn-green); border-color: var(--fieldstone-dark); margin-top:4px;">+ Add another size</button>
     </div>
 
     <div class="field">
@@ -54,9 +52,10 @@
 
     <div class="field">
       <label class="checkbox-row">
-        <input type="checkbox" name="in_stock" <%= (!product || product.in_stock) ? 'checked' : '' %>>
-        In stock
+        <input type="checkbox" name="visible" <%= (!product || product.visible) ? 'checked' : '' %>>
+        Visible on public site
       </label>
+      <span class="hint">Uncheck to hide this item from the website entirely — for out-of-season, discontinued, or on-hold-indefinitely items. It stays here in your dashboard so you can bring it back anytime without re-entering it.</span>
     </div>
 
     <div class="field">
@@ -64,11 +63,75 @@
       <input type="number" id="sort_order" name="sort_order" value="<%= product ? product.sort_order : 0 %>">
     </div>
 
+    <input type="hidden" name="variants_json" id="variants_json">
+
     <div class="form-actions">
       <button type="submit" class="btn btn-primary"><%= product ? 'Save Changes' : 'Add Product' %></button>
       <a href="/admin" class="btn btn-outline" style="color: var(--barn-green); border-color: var(--fieldstone-dark);">Cancel</a>
     </div>
   </form>
 </div>
+
+<script>
+// Seed data for existing sizes when editing; empty array (one blank row
+// added below) when creating a new product.
+var initialVariants = <%- JSON.stringify((variants || []).map(function(v) { return { label: v.label, price: Number(v.price), in_stock: v.in_stock }; })) %>;
+
+var rowsContainer = document.getElementById('variant-rows');
+
+function addVariantRow(data) {
+  data = data || { label: '', price: '', in_stock: true };
+  var row = document.createElement('div');
+  row.className = 'variant-row-edit';
+  row.style.cssText = 'display:flex; gap:8px; align-items:center; flex-wrap:wrap;';
+  row.innerHTML =
+    '<input type="text" class="v-label" placeholder="e.g. 23 lb bag" style="flex:1; min-width:140px; font-family:Inter,sans-serif; font-size:0.92rem; padding:9px 10px; border:1.5px solid var(--fieldstone-dark); border-radius:3px; background:var(--fieldstone); color:var(--ink);">' +
+    '<input type="number" class="v-price" step="0.01" min="0" placeholder="Price" style="width:110px; font-family:\'Space Mono\',monospace; font-size:0.9rem; padding:9px 10px; border:1.5px solid var(--fieldstone-dark); border-radius:3px; background:var(--fieldstone); color:var(--ink);">' +
+    '<label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; white-space:nowrap;"><input type="checkbox" class="v-instock" checked> In stock</label>' +
+    '<button type="button" class="btn btn-danger btn-sm remove-variant-btn">Remove</button>';
+
+  row.querySelector('.v-label').value = data.label || '';
+  row.querySelector('.v-price').value = (data.price !== undefined && data.price !== null) ? data.price : '';
+  row.querySelector('.v-instock').checked = data.in_stock !== false;
+  row.querySelector('.remove-variant-btn').addEventListener('click', function () {
+    if (rowsContainer.children.length <= 1) {
+      alert('A product needs at least one size.');
+      return;
+    }
+    row.remove();
+  });
+  rowsContainer.appendChild(row);
+}
+
+if (initialVariants.length === 0) {
+  addVariantRow();
+} else {
+  initialVariants.forEach(addVariantRow);
+}
+
+document.getElementById('add-variant-btn').addEventListener('click', function () {
+  addVariantRow();
+});
+
+document.getElementById('product-form').addEventListener('submit', function (e) {
+  var rows = rowsContainer.querySelectorAll('.variant-row-edit');
+  var data = [];
+  rows.forEach(function (row) {
+    var label = row.querySelector('.v-label').value.trim();
+    if (!label) return;
+    data.push({
+      label: label,
+      price: parseFloat(row.querySelector('.v-price').value) || 0,
+      in_stock: row.querySelector('.v-instock').checked
+    });
+  });
+  if (data.length === 0) {
+    e.preventDefault();
+    alert('Please enter at least one size with a label before saving.');
+    return;
+  }
+  document.getElementById('variants_json').value = JSON.stringify(data);
+});
+</script>
 
 <%- include('../partials/admin-footer') %>

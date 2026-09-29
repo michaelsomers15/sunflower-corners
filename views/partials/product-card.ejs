@@ -1,0 +1,41 @@
+<%
+// Expects a local `p`: a product row with .variants (array of
+// {label, price, in_stock}) and optionally .category_name.
+// One variant renders like the classic single-price tag; more than one
+// renders as a stacked size list, each with its own price and stock tag.
+var variants = p.variants || [];
+%>
+<div class="tag-card">
+  <% if (p.photo) { %>
+    <img class="tag-photo" src="/image/<%= p.id %>" alt="<%= p.name %>">
+  <% } else { %>
+    <div class="tag-photo-placeholder">No photo yet</div>
+  <% } %>
+  <div class="tag-body">
+    <% if (p.category_name) { %><span class="tag-category"><%= p.category_name %></span><% } %>
+    <h3><%= p.name %></h3>
+    <p class="tag-desc"><%= p.description %></p>
+
+    <% if (variants.length <= 1) { %>
+      <% var v = variants[0] || { price: 0, unit: 'each', in_stock: true }; %>
+      <div class="tag-footer">
+        <span class="tag-price">$<%= Number(v.price).toFixed(2) %><span class="tag-unit"><%= v.label %></span></span>
+        <% if (v.in_stock) { %>
+          <span class="stamp in-stock">In Stock</span>
+        <% } else { %>
+          <span class="stamp out-of-stock">Sold Out</span>
+        <% } %>
+      </div>
+    <% } else { %>
+      <div class="variant-list">
+        <% variants.forEach(function(v) { %>
+          <div class="variant-row">
+            <span class="variant-label"><%= v.label %></span>
+            <span class="variant-price">$<%= Number(v.price).toFixed(2) %></span>
+            <span class="variant-stock <%= v.in_stock ? 'v-in' : 'v-out' %>"><%= v.in_stock ? 'In Stock' : 'Sold Out' %></span>
+          </div>
+        <% }); %>
+      </div>
+    <% } %>
+  </div>
+</div>

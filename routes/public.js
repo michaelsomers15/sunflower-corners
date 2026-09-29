@@ -2,13 +2,28 @@ const express = require('express');
 const router = express.Router();
 const { pool, getSettings } = require('../db/pool');
 
+// Shared SELECT fragment: attaches each product's sizes/variants as a JSON
+// array (id, label, price, in_stock), ordered the way they were entered in
+// admin. A product with any variant in stock sorts ahead of one that's
+// fully sold out.
+const PRODUCT_SELECT = `
+  SELECT p.*, c.name AS category_name,
+    COALESCE((
+      SELECT json_agg(json_build_object('id', v.id, 'label', v.label, 'price', v.price, 'in_stock', v.in_stock) ORDER BY v.sort_order, v.id)
+      FROM product_variants v WHERE v.product_id = p.id
+    ), '[]') AS variants,
+    EXISTS(SELECT 1 FROM product_variants v WHERE v.product_id = p.id AND v.in_stock = true) AS any_in_stock
+  FROM products p
+  LEFT JOIN categories c ON c.id = p.category_id
+`;
+
 router.get('/', async (req, res, next) => {
   try {
     const settings = await getSettings();
     const { rows: featured } = await pool.query(
-      `SELECT p.*, c.name AS category_name FROM products p
-       LEFT JOIN categories c ON c.id = p.category_id
-       ORDER BY p.in_stock DESC, p.sort_order ASC, p.name ASC
+      `${PRODUCT_SELECT}
+       WHERE p.visible = true
+       ORDER BY any_in_stock DESC, p.sort_order ASC, p.name ASC
        LIMIT 4`
     );
     res.render('index', { settings, featured, page: 'home' });
@@ -20,9 +35,9 @@ router.get('/products', async (req, res, next) => {
     const settings = await getSettings();
     const { rows: categories } = await pool.query('SELECT * FROM categories ORDER BY sort_order ASC, name ASC');
     const { rows: products } = await pool.query(
-      `SELECT p.*, c.name AS category_name FROM products p
-       LEFT JOIN categories c ON c.id = p.category_id
-       ORDER BY p.in_stock DESC, p.sort_order ASC, p.name ASC`
+      `${PRODUCT_SELECT}
+       WHERE p.visible = true
+       ORDER BY any_in_stock DESC, p.sort_order ASC, p.name ASC`
     );
     const byCategory = categories.map((cat) => ({
       ...cat,
@@ -48,7 +63,8 @@ router.get('/visit', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// Serves product photos stored in Postgres as bytea.
+// Serves product photos stored in Postgres as bytea. Not gated on visible —
+// an admin editing a hidden product's listing still needs its photo to load.
 router.get('/image/:id', async (req, res, next) => {
   try {
     const { rows } = await pool.query('SELECT photo, photo_mime FROM products WHERE id = $1', [req.params.id]);

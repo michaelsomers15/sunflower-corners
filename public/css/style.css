@@ -270,6 +270,22 @@ section.block.alt { background: var(--paper); }
 .stamp.in-stock { color: var(--barn-green-light); }
 .stamp.out-of-stock { color: var(--rust); }
 
+/* Multi-size product listing (e.g. Oats 23 lb / 45 lb) */
+.variant-list { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.variant-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 7px 0; border-bottom: 1px dashed var(--fieldstone-dark);
+}
+.variant-row:last-child { border-bottom: none; }
+.variant-label { font-size: 0.88rem; color: var(--ink); flex: 1; }
+.variant-price { font-family: 'Space Mono', monospace; font-weight: 700; font-size: 0.92rem; color: var(--barn-green); white-space: nowrap; }
+.variant-stock {
+  font-family: 'Space Mono', monospace; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 3px 8px; border-radius: 12px; white-space: nowrap;
+}
+.variant-stock.v-in { background: #d9ead0; color: #2c5e1a; }
+.variant-stock.v-out { background: #f2d6cd; color: var(--rust); }
+
 /* ---------- Category label (hand-painted sign feel) ---------- */
 
 .category-label {
@@ -356,6 +372,8 @@ table.data-table td { padding: 12px 14px; border-bottom: 1px solid var(--fieldst
 table.data-table tr:last-child td { border-bottom: none; }
 table.data-table .thumb { width: 46px; height: 46px; object-fit: cover; border-radius: 3px; border: 1px solid var(--fieldstone-dark); }
 table.data-table .thumb-placeholder { width: 46px; height: 46px; border-radius: 3px; background: var(--fieldstone-dark); display: inline-block; }
+table.data-table tr.row-hidden { opacity: 0.55; }
+table.data-table tr.row-hidden td strong { text-decoration: line-through; text-decoration-color: var(--rust); }
 
 .pill-toggle {
   border: none;
@@ -368,10 +386,15 @@ table.data-table .thumb-placeholder { width: 46px; height: 46px; border-radius: 
   padding: 6px 12px;
   border-radius: 20px;
   transition: opacity 0.15s ease;
+  white-space: nowrap;
 }
 .pill-toggle:hover { opacity: 0.85; }
 .pill-toggle.on { background: #d9ead0; color: #2c5e1a; }
 .pill-toggle.off { background: #f2d6cd; color: var(--rust); }
+.pill-toggle.visible { background: #d3e3ef; color: #205072; }
+.pill-toggle.hidden { background: #e5ded0; color: var(--barn-wood); }
+
+.status-stack { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
 
 .row-actions { display: flex; gap: 8px; }
 .row-actions form { margin: 0; }

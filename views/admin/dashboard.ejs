@@ -3,7 +3,7 @@
 <div class="admin-header-row">
   <div>
     <h1 style="margin-bottom:2px;">Products</h1>
-    <p style="color: var(--ink-soft); margin:0;">Tap "In Stock / Sold Out" to flip status instantly — no need to open the item.</p>
+    <p style="color: var(--ink-soft); margin:0;">Tap a size's status pill to flip In Stock / Sold Out for just that size. Use <strong>Visible</strong> to pull an entire product off the public site without deleting it.</p>
   </div>
   <a href="/admin/products/new" class="btn btn-primary">+ Add Product</a>
 </div>
@@ -20,15 +20,15 @@
           <th>Photo</th>
           <th>Name</th>
           <th>Category</th>
-          <th>Price</th>
-          <th>Status</th>
+          <th>Sizes &amp; Stock</th>
+          <th>Visible</th>
           <th>Updated</th>
           <th></th>
         </tr>
       </thead>
       <tbody>
         <% products.forEach(function(p) { %>
-          <tr id="row-<%= p.id %>">
+          <tr id="row-<%= p.id %>" class="<%= p.visible ? '' : 'row-hidden' %>">
             <td>
               <% if (p.photo) { %>
                 <img class="thumb" src="/image/<%= p.id %>" alt="">
@@ -38,13 +38,27 @@
             </td>
             <td><strong><%= p.name %></strong></td>
             <td><%= p.category_name || '—' %></td>
-            <td class="mono">$<%= Number(p.price).toFixed(2) %> <span style="color:var(--ink-soft); font-size:0.8em;"><%= p.unit %></span></td>
+            <td>
+              <div class="status-stack">
+                <% (p.variants || []).forEach(function(v) { %>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="mono" style="font-size:0.82rem; min-width:110px;"><%= v.label %> — $<%= Number(v.price).toFixed(2) %></span>
+                    <button type="button"
+                      class="pill-toggle <%= v.in_stock ? 'on' : 'off' %>"
+                      data-id="<%= v.id %>"
+                      onclick="toggleVariant(this)">
+                      <%= v.in_stock ? 'In Stock' : 'Sold Out' %>
+                    </button>
+                  </div>
+                <% }); %>
+              </div>
+            </td>
             <td>
               <button type="button"
-                class="pill-toggle <%= p.in_stock ? 'on' : 'off' %>"
+                class="pill-toggle <%= p.visible ? 'visible' : 'hidden' %>"
                 data-id="<%= p.id %>"
-                onclick="toggleStock(this)">
-                <%= p.in_stock ? 'In Stock' : 'Sold Out' %>
+                onclick="toggleVisible(this)">
+                <%= p.visible ? 'Visible' : 'Hidden' %>
               </button>
             </td>
             <td class="mono" style="font-size:0.78rem; color: var(--ink-soft);"><%= formatLocal(p.updated_at) %></td>
@@ -64,11 +78,11 @@
 </div>
 
 <script>
-async function toggleStock(btn) {
+async function toggleVariant(btn) {
   const id = btn.dataset.id;
   btn.disabled = true;
   try {
-    const res = await fetch('/admin/products/' + id + '/toggle-stock', { method: 'POST' });
+    const res = await fetch('/admin/variants/' + id + '/toggle-stock', { method: 'POST' });
     if (!res.ok) throw new Error('Request failed');
     const data = await res.json();
     if (data.in_stock) {
@@ -78,6 +92,28 @@ async function toggleStock(btn) {
     }
   } catch (e) {
     alert('Could not update stock status. Please try again.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function toggleVisible(btn) {
+  const id = btn.dataset.id;
+  btn.disabled = true;
+  try {
+    const res = await fetch('/admin/products/' + id + '/toggle-visible', { method: 'POST' });
+    if (!res.ok) throw new Error('Request failed');
+    const data = await res.json();
+    const row = document.getElementById('row-' + id);
+    if (data.visible) {
+      btn.classList.remove('hidden'); btn.classList.add('visible'); btn.textContent = 'Visible';
+      if (row) row.classList.remove('row-hidden');
+    } else {
+      btn.classList.remove('visible'); btn.classList.add('hidden'); btn.textContent = 'Hidden';
+      if (row) row.classList.add('row-hidden');
+    }
+  } catch (e) {
+    alert('Could not update visibility. Please try again.');
   } finally {
     btn.disabled = false;
   }

@@ -1,9 +1,9 @@
 // One-time (idempotent) seed script.
 // Usage: npm run seed
-// Creates starter categories, placeholder products (edit these in /admin),
-// and two admin logins with randomly generated temporary passwords, which
-// are printed to the console ONCE. Log in and change them immediately via
-// /admin/account.
+// Creates starter categories, placeholder products with one size/variant
+// each (edit these in /admin), and two admin logins with randomly
+// generated temporary passwords, which are printed to the console ONCE.
+// Log in and change them immediately via /admin/account.
 
 require('dotenv').config();
 const bcrypt = require('bcrypt');
@@ -27,10 +27,15 @@ async function upsertCategory(name, sortOrder) {
 async function insertProductIfMissing(product) {
   const { rows } = await pool.query('SELECT id FROM products WHERE name = $1', [product.name]);
   if (rows.length) return;
+  const { rows: inserted } = await pool.query(
+    `INSERT INTO products (category_id, name, description, sort_order)
+     VALUES ($1, $2, $3, $4) RETURNING id`,
+    [product.category_id, product.name, product.description, product.sort_order]
+  );
   await pool.query(
-    `INSERT INTO products (category_id, name, description, price, unit, in_stock, sort_order)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    [product.category_id, product.name, product.description, product.price, product.unit, product.in_stock, product.sort_order]
+    `INSERT INTO product_variants (product_id, label, price, in_stock, sort_order)
+     VALUES ($1, $2, $3, $4, 0)`,
+    [inserted[0].id, product.unit, product.price, product.in_stock]
   );
 }
 
@@ -59,30 +64,30 @@ async function main() {
   const syrup = await upsertCategory('Maple Syrup', 3);
   const other = await upsertCategory('Other Farmstand Goods', 4);
 
-  console.log('Seeding placeholder products (edit real prices/descriptions in /admin)...');
+  console.log('Seeding placeholder products (edit real prices/descriptions/sizes in /admin)...');
   await insertProductIfMissing({
-    category_id: grains, name: 'Rye', unit: 'per 50 lb bag', price: 0,
-    description: 'Placeholder listing — update description and price in the admin dashboard.',
+    category_id: grains, name: 'Rye', unit: '50 lb bag', price: 0,
+    description: 'Placeholder listing — update description, price, and sizes in the admin dashboard.',
     in_stock: true, sort_order: 1
   });
   await insertProductIfMissing({
-    category_id: grains, name: 'Corn', unit: 'per 50 lb bag', price: 0,
-    description: 'Placeholder listing — update description and price in the admin dashboard.',
+    category_id: grains, name: 'Corn', unit: '50 lb bag', price: 0,
+    description: 'Placeholder listing — update description, price, and sizes in the admin dashboard.',
     in_stock: true, sort_order: 2
   });
   await insertProductIfMissing({
-    category_id: grains, name: 'Oats', unit: 'per 50 lb bag', price: 0,
-    description: 'Placeholder listing — update description and price in the admin dashboard.',
+    category_id: grains, name: 'Oats', unit: '50 lb bag', price: 0,
+    description: 'Placeholder listing — update description, price, and sizes in the admin dashboard.',
     in_stock: true, sort_order: 3
   });
   await insertProductIfMissing({
-    category_id: seeds, name: 'Sunflower Seeds', unit: 'per 50 lb bag', price: 0,
-    description: 'Placeholder listing — update description and price in the admin dashboard.',
+    category_id: seeds, name: 'Sunflower Seeds', unit: '50 lb bag', price: 0,
+    description: 'Placeholder listing — update description, price, and sizes in the admin dashboard.',
     in_stock: true, sort_order: 1
   });
   await insertProductIfMissing({
-    category_id: syrup, name: 'Maple Syrup', unit: 'per quart', price: 0,
-    description: 'Placeholder listing — update description and price in the admin dashboard.',
+    category_id: syrup, name: 'Maple Syrup', unit: 'quart', price: 0,
+    description: 'Placeholder listing — update description, price, and sizes in the admin dashboard.',
     in_stock: true, sort_order: 1
   });
 

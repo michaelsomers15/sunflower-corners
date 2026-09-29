@@ -2,8 +2,8 @@
 
 Informational farmstand website for Sunflower Corners (Custer, Wisconsin). Public
 pages show products, availability, hours, and contact info. A password-protected
-admin dashboard lets your mom (and you) update inventory, stock status, site
-copy, and hours — no code editing required after deployment.
+admin dashboard lets your mom (and you) update inventory, stock status, visibility,
+site copy, and hours — no code editing required after deployment.
 
 **Stack:** Node.js / Express / PostgreSQL / Railway — same as RentalPro, CoinOp
 Manager, and LawnRoute. Server-rendered EJS views, session auth (bcrypt +
@@ -17,11 +17,21 @@ stored directly in Postgres (no third-party file storage to manage).
 - **Public site:** Home, Products (grouped by category, price, description,
   photo, In Stock / Sold Out status), Our Farm (about), Visit & Contact
   (address, hours, phone, map link).
+- **Multiple sizes per product** — a product like Oats can carry more than
+  one size/bag (e.g. "23 lb bag" and "45 lb bag"), each with its own price
+  and its own In Stock / Sold Out status, under one listing. A product with
+  one size still shows the classic single-price tag; two or more sizes show
+  as a stacked list within the same card.
 - **Admin dashboard** at `/admin`:
-  - One-tap In Stock / Sold Out toggle per product (no page reload)
-  - Full product CRUD with photo upload (auto-resized/compressed)
-  - Category management
-  - Site settings (name, tagline, address, hours, phone, email, about text)
+  - One-tap **In Stock / Sold Out** toggle per size
+  - One-tap **Visible / Hidden** toggle per product — hide an item from the
+    public site (out of season, discontinued, on hold indefinitely) without
+    deleting it; it stays in the dashboard so it's easy to bring back later
+  - Full product CRUD with photo upload (auto-resized/compressed) and an
+    "Add another size" button on the product form for multi-size items
+  - Category management, including inline rename/reorder
+  - Site settings (name, tagline, address, hours, phone, email, about text,
+    and the homepage/products/visit page copy)
   - Multiple admin logins, each with their own password
   - "My Account" self-service password change
 - Rate-limited login (10 attempts / 15 min) and hashed passwords (bcrypt, cost 12)
@@ -62,66 +72,71 @@ Visit `http://localhost:3000` for the public site and
 
 ## 3. Deploying to Railway
 
-You mentioned the domain is already through Railway, so this assumes a new
-Railway service in that same project.
-
 ```bash
 railway login
 railway link
 ```
 
 Add a PostgreSQL plugin from the Railway dashboard if you don't already have
-one attached to this project (New -> Database -> PostgreSQL). Railway sets
-`DATABASE_URL` automatically for services in the same project once linked.
+one attached to this project (New -> Database -> PostgreSQL).
 
 Set the remaining variables in the Railway dashboard under your service's
-**Variables** tab (Settings > Variables) — not in a committed `.env` file:
+**Variables** tab:
 
+- `DATABASE_URL` — reference your Postgres service's variable (click the
+  `{}` icon next to the field and select Postgres > DATABASE_URL)
 - `SESSION_SECRET` — a long random string (generate with the command above)
 - `NODE_ENV` — `production`
 
-Deploy:
+Deploy by pushing to the connected GitHub repo, or with:
 
 ```bash
 railway up
 ```
 
-Then run the one-time seed against the production database. Easiest way is
-from the Railway dashboard's service shell, or locally with the production
-`DATABASE_URL` exported:
+Then run the one-time seed against the production database from Railway's
+built-in Console (open the service > Console tab):
 
 ```bash
-railway run npm run seed
+npm run seed
 ```
 
-Again, copy the printed temporary passwords immediately — they are not shown
-again. Log in at `https://sunflowercorners.pro/admin/login` and have your mom
-change her password right away under "My Account."
-
-Point `sunflowercorners.pro` at the Railway service the same way your other
-`.pro` domains are configured (Railway dashboard > Settings > Domains).
+Copy the printed temporary passwords immediately — they are not shown again.
+Log in at `https://sunflowercorners.pro/admin/login` and change the password
+right away under "My Account."
 
 ## 4. Day-to-day use for your mom
 
-Once logged in at `/admin`, the main screen is the product list. Each product
-has an **In Stock / Sold Out** button — one tap flips it, no need to open the
-item. "Add Product" creates a new listing with a name, category, description,
-price, unit (e.g. "per 50 lb bag"), and an optional photo.
+Once logged in at `/admin`, the main screen is the product list. Each
+product's sizes get their own **In Stock / Sold Out** pill — flip one when
+that size runs out but you expect to restock. The item (and its other
+sizes, if any) stays listed on the public site; only the sold-out size
+shows the "Sold Out" tag.
 
-Site Settings covers hours, address, phone, and the "About" text — she can
-update seasonal hours herself without asking you to touch code.
+Each product also has a **Visible / Hidden** pill — flip it to pull the
+whole item off the public site entirely. Use this for anything out of
+season, discontinued, or on hold for an unknown length of time. Hidden
+items stay in this dashboard (dimmed, with a line through the name) so
+nothing needs to be re-entered when it's time to bring them back.
+
+"Add Product" creates a new listing with a name, category, description,
+and an optional photo. Under **Sizes & Pricing**, add one row per size you
+carry — e.g. "23 lb bag" at $9.50 and "45 lb bag" at $16.00 — each with its
+own price and its own stock checkbox. One size is completely fine too;
+just leave the single default row. Click "+ Add another size" to add more,
+or "Remove" to drop one (a product always needs at least one size).
+
+Site Settings covers hours, address, phone, and all of the page copy — she
+can update seasonal hours or wording herself without touching code.
 
 ## 5. Notes on data & photos
 
 - Product photos are stored directly in Postgres (resized to a 1200px-wide
   JPEG on upload) rather than a separate file-storage service, so there's
-  nothing extra to configure or pay for. Fine for a farmstand-sized catalog;
-  if the product list grows into the hundreds with many photos, moving photos
-  to object storage (e.g. S3/R2) would be the next step — flag it and I can
-  build that migration.
+  nothing extra to configure or pay for. Fine for a farmstand-sized catalog.
 - All admin-visible timestamps (last updated, last login) are shown in
   Central Time with the UTC offset explicitly labeled, e.g. `Aug 7, 2026,
-  2:14 PM (UTC-5)`, so they're unambiguous regardless of daylight saving.
+  2:14 PM (UTC-5)`.
 
 ## 6. Project structure
 
@@ -131,12 +146,12 @@ sunflower-corners/
   db/
     schema.sql            Table definitions (auto-applied on boot)
     pool.js                Postgres pool + settings helper
-    seed.js                 One-time seed script (categories, placeholder products, admin logins)
+    seed.js                 One-time seed script
   middleware/
     auth.js                Session-based admin route guard
     localTime.js            UTC -> Central Time formatting helper
   routes/
-    public.js              Public site routes
+    public.js              Public site routes (filters out hidden products)
     admin.js                Admin dashboard + auth routes
   views/                  EJS templates (public + admin/)
   public/
