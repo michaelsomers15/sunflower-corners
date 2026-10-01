@@ -48,19 +48,32 @@ CREATE TABLE IF NOT EXISTS product_variants (
   product_id INT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
   label VARCHAR(80) NOT NULL,       -- e.g. "23 lb bag", "45 lb bag", "per quart"
   price NUMERIC(10,2) NOT NULL DEFAULT 0,
+  -- Legacy flag, kept in sync with status (true only when status = 'in_stock').
   in_stock BOOLEAN NOT NULL DEFAULT true,
+  -- 'in_stock' | 'sold_out' | 'coming_soon'
+  status VARCHAR(20) NOT NULL DEFAULT 'in_stock',
   sort_order INT NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Backfill for databases created before the three-way "status" column
+-- existed: derive it from the old in_stock flag. Idempotent — the UPDATE
+-- only touches rows still NULL, and SET DEFAULT / SET NOT NULL are no-ops
+-- once applied.
+ALTER TABLE product_variants ADD COLUMN IF NOT EXISTS status VARCHAR(20);
+UPDATE product_variants SET status = CASE WHEN in_stock THEN 'in_stock' ELSE 'sold_out' END WHERE status IS NULL;
+ALTER TABLE product_variants ALTER COLUMN status SET DEFAULT 'in_stock';
+ALTER TABLE product_variants ALTER COLUMN status SET NOT NULL;
 
 -- One-time backfill: any product left over from the old single-price schema
 -- (or created before this migration ran) gets its old price/unit/in_stock
 -- turned into its first size/variant. Safe to run on every boot — it only
 -- inserts for a product that doesn't already have at least one variant, so
 -- it's a no-op once every product has been migrated.
-INSERT INTO product_variants (product_id, label, price, in_stock, sort_order)
-SELECT p.id, COALESCE(NULLIF(TRIM(p.unit), ''), 'each'), COALESCE(p.price, 0), COALESCE(p.in_stock, true), 0
+INSERT INTO product_variants (product_id, label, price, in_stock, status, sort_order)
+SELECT p.id, COALESCE(NULLIF(TRIM(p.unit), ''), 'each'), COALESCE(p.price, 0), COALESCE(p.in_stock, true),
+       CASE WHEN COALESCE(p.in_stock, true) THEN 'in_stock' ELSE 'sold_out' END, 0
 FROM products p
 WHERE NOT EXISTS (SELECT 1 FROM product_variants v WHERE v.product_id = p.id);
 

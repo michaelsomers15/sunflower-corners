@@ -15,15 +15,17 @@ stored directly in Postgres (no third-party file storage to manage).
 ## 1. What's included
 
 - **Public site:** Home, Products (grouped by category, price, description,
-  photo, In Stock / Sold Out status), Our Farm (about), Visit & Contact
+  photo, In Stock / Sold Out / Coming Soon status), Our Farm (about), Visit & Contact
   (address, hours, phone, map link).
 - **Multiple sizes per product** — a product like Oats can carry more than
   one size/bag (e.g. "23 lb bag" and "45 lb bag"), each with its own price
-  and its own In Stock / Sold Out status, under one listing. A product with
+  and its own In Stock / Sold Out / Coming Soon status, under one listing. A product with
   one size still shows the classic single-price tag; two or more sizes show
   as a stacked list within the same card.
 - **Admin dashboard** at `/admin`:
-  - One-tap **In Stock / Sold Out** toggle per size
+  - **In Stock / Sold Out / Coming Soon** status dropdown per size (saves
+    instantly). The "Coming Soon" wording is editable under Site Settings —
+    e.g. "Back Soon" or "Harvesting Soon".
   - One-tap **Visible / Hidden** toggle per product — hide an item from the
     public site (out of season, discontinued, on hold indefinitely) without
     deleting it; it stays in the dashboard so it's easy to bring back later
@@ -108,10 +110,18 @@ right away under "My Account."
 ## 4. Day-to-day use for your mom
 
 Once logged in at `/admin`, the main screen is the product list. Each
-product's sizes get their own **In Stock / Sold Out** pill — flip one when
-that size runs out but you expect to restock. The item (and its other
-sizes, if any) stays listed on the public site; only the sold-out size
-shows the "Sold Out" tag.
+product's sizes get their own status dropdown with three choices:
+
+- **In Stock** — on hand now.
+- **Sold Out** — out, with no particular date to be back.
+- **Coming Soon** — out right now but expected back (next harvest, next
+  batch of syrup). Shows as a gold dashed stamp. The wording can be changed
+  under **Site Settings → "Coming soon" status wording** (e.g. "Back Soon",
+  "Harvesting Soon").
+
+The item (and its other sizes, if any) stays listed on the public site
+either way. On the Products page, items with something in stock show
+first, then coming-soon items, then fully sold-out items.
 
 Each product also has a **Visible / Hidden** pill — flip it to pull the
 whole item off the public site entirely. Use this for anything out of

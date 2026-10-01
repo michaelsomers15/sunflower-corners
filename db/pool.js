@@ -24,7 +24,8 @@ const DEFAULT_SETTINGS = {
   facebook_url: '',
   home_lede: "Rye, corn, oats, sunflower seed, and pure maple syrup — grown, cleaned, and bagged right here on the farm. Check what's in stock before you head out.",
   products_intro: "Stock status is updated by hand at the stand, so it's worth a quick check here before you make a trip for something specific.",
-  visit_note: 'Hours may shift seasonally — this page is always the most current source.'
+  visit_note: 'Hours may shift seasonally — this page is always the most current source.',
+  coming_soon_label: 'Coming Soon'
 };
 
 async function getSettings() {

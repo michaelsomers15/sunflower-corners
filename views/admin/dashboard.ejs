@@ -1,9 +1,10 @@
 <%- include('../partials/admin-header', { pageTitle: 'Products' }) %>
+<% var comingSoonLabel = (settings && settings.coming_soon_label && settings.coming_soon_label.trim()) || 'Coming Soon'; %>
 
 <div class="admin-header-row">
   <div>
     <h1 style="margin-bottom:2px;">Products</h1>
-    <p style="color: var(--ink-soft); margin:0;">Tap a size's status pill to flip In Stock / Sold Out for just that size. Use <strong>Visible</strong> to pull an entire product off the public site without deleting it.</p>
+    <p style="color: var(--ink-soft); margin:0;">Use a size's status dropdown to set it to In Stock, Sold Out, or <%= comingSoonLabel %> — it saves instantly. Use <strong>Visible</strong> to pull an entire product off the public site without deleting it.</p>
   </div>
   <a href="/admin/products/new" class="btn btn-primary">+ Add Product</a>
 </div>
@@ -43,12 +44,15 @@
                 <% (p.variants || []).forEach(function(v) { %>
                   <div style="display:flex; align-items:center; gap:8px;">
                     <span class="mono" style="font-size:0.82rem; min-width:110px;"><%= v.label %> — $<%= Number(v.price).toFixed(2) %></span>
-                    <button type="button"
-                      class="pill-toggle <%= v.in_stock ? 'on' : 'off' %>"
+                    <select class="pill-toggle pill-select status-<%= v.status %>"
                       data-id="<%= v.id %>"
-                      onclick="toggleVariant(this)">
-                      <%= v.in_stock ? 'In Stock' : 'Sold Out' %>
-                    </button>
+                      data-prev="<%= v.status %>"
+                      aria-label="Stock status for <%= p.name %> <%= v.label %>"
+                      onchange="setVariantStatus(this)">
+                      <option value="in_stock" <%= v.status === 'in_stock' ? 'selected' : '' %>>In Stock</option>
+                      <option value="sold_out" <%= v.status === 'sold_out' ? 'selected' : '' %>>Sold Out</option>
+                      <option value="coming_soon" <%= v.status === 'coming_soon' ? 'selected' : '' %>><%= comingSoonLabel %></option>
+                    </select>
                   </div>
                 <% }); %>
               </div>
@@ -78,22 +82,32 @@
 </div>
 
 <script>
-async function toggleVariant(btn) {
-  const id = btn.dataset.id;
-  btn.disabled = true;
+function applyStatusClass(sel, status) {
+  sel.classList.remove('status-in_stock', 'status-sold_out', 'status-coming_soon');
+  sel.classList.add('status-' + status);
+}
+
+async function setVariantStatus(sel) {
+  const id = sel.dataset.id;
+  const status = sel.value;
+  sel.disabled = true;
   try {
-    const res = await fetch('/admin/variants/' + id + '/toggle-stock', { method: 'POST' });
+    const res = await fetch('/admin/variants/' + id + '/status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: status })
+    });
     if (!res.ok) throw new Error('Request failed');
     const data = await res.json();
-    if (data.in_stock) {
-      btn.classList.remove('off'); btn.classList.add('on'); btn.textContent = 'In Stock';
-    } else {
-      btn.classList.remove('on'); btn.classList.add('off'); btn.textContent = 'Sold Out';
-    }
+    sel.value = data.status;
+    sel.dataset.prev = data.status;
+    applyStatusClass(sel, data.status);
   } catch (e) {
+    sel.value = sel.dataset.prev;
+    applyStatusClass(sel, sel.dataset.prev);
     alert('Could not update stock status. Please try again.');
   } finally {
-    btn.disabled = false;
+    sel.disabled = false;
   }
 }
 

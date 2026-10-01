@@ -269,6 +269,7 @@ section.block.alt { background: var(--paper); }
 }
 .stamp.in-stock { color: var(--barn-green-light); }
 .stamp.out-of-stock { color: var(--rust); }
+.stamp.coming-soon { color: var(--sunflower-gold-deep); border-style: dashed; }
 .stamp.stamp-sm { font-size: 0.6rem; padding: 3px 7px; }
 
 /* Multi-size product listing (e.g. Oats 23 lb / 45 lb) — same rubber-stamp
@@ -389,6 +390,20 @@ table.data-table tr.row-hidden td strong { text-decoration: line-through; text-d
 .pill-toggle.off { background: #f2d6cd; color: var(--rust); }
 .pill-toggle.visible { background: #d3e3ef; color: #205072; }
 .pill-toggle.hidden { background: #e5ded0; color: var(--barn-wood); }
+
+/* Stock status dropdown on the dashboard — same pill look, three colors. */
+.pill-select {
+  -webkit-appearance: none; appearance: none;
+  padding-right: 26px;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 13px) 50%, calc(100% - 9px) 50%;
+  background-size: 4px 4px, 4px 4px;
+  background-repeat: no-repeat;
+}
+.pill-select.status-in_stock { background-color: #d9ead0; color: #2c5e1a; }
+.pill-select.status-sold_out { background-color: #f2d6cd; color: var(--rust); }
+.pill-select.status-coming_soon { background-color: #f6e6bf; color: #7a5408; }
+.pill-select option { background: #fff; color: var(--ink); }
 
 .status-stack { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
 

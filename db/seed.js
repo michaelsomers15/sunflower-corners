@@ -33,9 +33,9 @@ async function insertProductIfMissing(product) {
     [product.category_id, product.name, product.description, product.sort_order]
   );
   await pool.query(
-    `INSERT INTO product_variants (product_id, label, price, in_stock, sort_order)
-     VALUES ($1, $2, $3, $4, 0)`,
-    [inserted[0].id, product.unit, product.price, product.in_stock]
+    `INSERT INTO product_variants (product_id, label, price, in_stock, status, sort_order)
+     VALUES ($1, $2, $3, $4, $5, 0)`,
+    [inserted[0].id, product.unit, product.price, product.in_stock, product.in_stock ? 'in_stock' : 'sold_out']
   );
 }
 

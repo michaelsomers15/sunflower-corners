@@ -3,16 +3,20 @@ const router = express.Router();
 const { pool, getSettings } = require('../db/pool');
 
 // Shared SELECT fragment: attaches each product's sizes/variants as a JSON
-// array (id, label, price, in_stock), ordered the way they were entered in
-// admin. A product with any variant in stock sorts ahead of one that's
-// fully sold out.
+// array (id, label, price, status), ordered the way they were entered in
+// admin. stock_rank sorts listings: 0 = at least one size in stock,
+// 1 = nothing in stock but at least one size coming soon, 2 = fully sold out.
 const PRODUCT_SELECT = `
   SELECT p.*, c.name AS category_name,
     COALESCE((
-      SELECT json_agg(json_build_object('id', v.id, 'label', v.label, 'price', v.price, 'in_stock', v.in_stock) ORDER BY v.sort_order, v.id)
+      SELECT json_agg(json_build_object('id', v.id, 'label', v.label, 'price', v.price, 'status', v.status) ORDER BY v.sort_order, v.id)
       FROM product_variants v WHERE v.product_id = p.id
     ), '[]') AS variants,
-    EXISTS(SELECT 1 FROM product_variants v WHERE v.product_id = p.id AND v.in_stock = true) AS any_in_stock
+    CASE
+      WHEN EXISTS(SELECT 1 FROM product_variants v WHERE v.product_id = p.id AND v.status = 'in_stock') THEN 0
+      WHEN EXISTS(SELECT 1 FROM product_variants v WHERE v.product_id = p.id AND v.status = 'coming_soon') THEN 1
+      ELSE 2
+    END AS stock_rank
   FROM products p
   LEFT JOIN categories c ON c.id = p.category_id
 `;
@@ -23,7 +27,7 @@ router.get('/', async (req, res, next) => {
     const { rows: featured } = await pool.query(
       `${PRODUCT_SELECT}
        WHERE p.visible = true
-       ORDER BY any_in_stock DESC, p.sort_order ASC, p.name ASC
+       ORDER BY stock_rank ASC, p.sort_order ASC, p.name ASC
        LIMIT 4`
     );
     res.render('index', { settings, featured, page: 'home' });
@@ -37,7 +41,7 @@ router.get('/products', async (req, res, next) => {
     const { rows: products } = await pool.query(
       `${PRODUCT_SELECT}
        WHERE p.visible = true
-       ORDER BY any_in_stock DESC, p.sort_order ASC, p.name ASC`
+       ORDER BY stock_rank ASC, p.sort_order ASC, p.name ASC`
     );
     const byCategory = categories.map((cat) => ({
       ...cat,

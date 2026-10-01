@@ -27,7 +27,20 @@ const loginLimiter = rateLimit({
   legacyHeaders: false
 });
 
-// Parses the JSON-encoded list of {label, price, in_stock} sent by the
+// The three stock states a size/variant can be in. 'coming_soon' covers
+// items that are out right now but expected back (next harvest, next boil,
+// next batch) — its public wording is editable via the coming_soon_label
+// site setting.
+const STOCK_STATUSES = ['in_stock', 'sold_out', 'coming_soon'];
+
+function normalizeStatus(v) {
+  if (STOCK_STATUSES.includes(v.status)) return v.status;
+  // Older clients only sent the boolean in_stock flag.
+  if (v.in_stock === false || v.in_stock === 'false') return 'sold_out';
+  return 'in_stock';
+}
+
+// Parses the JSON-encoded list of {label, price, status} sent by the
 // product form's hidden "variants_json" field (built client-side from the
 // dynamic size rows). Falls back to a single default-priced variant if
 // nothing usable was submitted, so a product can never end up with zero
@@ -44,10 +57,10 @@ function parseVariants(raw) {
     .map((v) => ({
       label: String(v.label).trim().slice(0, 80),
       price: Number.parseFloat(v.price) || 0,
-      in_stock: v.in_stock === true || v.in_stock === 'true'
+      status: normalizeStatus(v)
     }));
   if (cleaned.length === 0) {
-    cleaned.push({ label: 'each', price: 0, in_stock: true });
+    cleaned.push({ label: 'each', price: 0, status: 'in_stock' });
   }
   return cleaned;
 }
@@ -94,28 +107,33 @@ router.get('/', async (req, res, next) => {
     const { rows: products } = await pool.query(
       `SELECT p.*, c.name AS category_name,
          COALESCE((
-           SELECT json_agg(json_build_object('id', v.id, 'label', v.label, 'price', v.price, 'in_stock', v.in_stock) ORDER BY v.sort_order, v.id)
+           SELECT json_agg(json_build_object('id', v.id, 'label', v.label, 'price', v.price, 'status', v.status) ORDER BY v.sort_order, v.id)
            FROM product_variants v WHERE v.product_id = p.id
          ), '[]') AS variants
        FROM products p
        LEFT JOIN categories c ON c.id = p.category_id
        ORDER BY c.sort_order ASC NULLS LAST, p.sort_order ASC, p.name ASC`
     );
+    const settings = await getSettings();
     res.render('admin/dashboard', {
-      products, formatLocal, page: 'admin-dashboard', adminName: req.session.adminName
+      products, settings, formatLocal, page: 'admin-dashboard', adminName: req.session.adminName
     });
   } catch (err) { next(err); }
 });
 
-// Quick AJAX toggle of in-stock status for one size/variant from the dashboard.
-router.post('/variants/:id/toggle-stock', async (req, res, next) => {
+// Quick AJAX update of stock status (In Stock / Sold Out / Coming Soon) for
+// one size/variant from the dashboard dropdown.
+router.post('/variants/:id/status', async (req, res, next) => {
   try {
+    const status = req.body && req.body.status;
+    if (!STOCK_STATUSES.includes(status)) return res.status(400).json({ error: 'Invalid status' });
     const { rows } = await pool.query(
-      'UPDATE product_variants SET in_stock = NOT in_stock, updated_at = now() WHERE id = $1 RETURNING in_stock',
-      [req.params.id]
+      `UPDATE product_variants SET status = $1, in_stock = $2, updated_at = now()
+       WHERE id = $3 RETURNING status`,
+      [status, status === 'in_stock', req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: 'Not found' });
-    res.json({ in_stock: rows[0].in_stock });
+    res.json({ status: rows[0].status });
   } catch (err) { next(err); }
 });
 
@@ -138,7 +156,8 @@ router.post('/products/:id/toggle-visible', async (req, res, next) => {
 router.get('/products/new', async (req, res, next) => {
   try {
     const { rows: categories } = await pool.query('SELECT * FROM categories ORDER BY sort_order, name');
-    res.render('admin/product-form', { product: null, variants: [], categories, error: null, page: 'admin-products' });
+    const settings = await getSettings();
+    res.render('admin/product-form', { product: null, variants: [], categories, settings, error: null, page: 'admin-products' });
   } catch (err) { next(err); }
 });
 
@@ -164,8 +183,8 @@ router.post('/products', upload.single('photo'), async (req, res, next) => {
     for (let i = 0; i < variants.length; i++) {
       const v = variants[i];
       await client.query(
-        `INSERT INTO product_variants (product_id, label, price, in_stock, sort_order) VALUES ($1,$2,$3,$4,$5)`,
-        [productId, v.label, v.price, v.in_stock, i]
+        `INSERT INTO product_variants (product_id, label, price, in_stock, status, sort_order) VALUES ($1,$2,$3,$4,$5,$6)`,
+        [productId, v.label, v.price, v.status === 'in_stock', v.status, i]
       );
     }
     await client.query('COMMIT');
@@ -187,7 +206,8 @@ router.get('/products/:id/edit', async (req, res, next) => {
       [req.params.id]
     );
     const { rows: categories } = await pool.query('SELECT * FROM categories ORDER BY sort_order, name');
-    res.render('admin/product-form', { product: rows[0], variants, categories, error: null, page: 'admin-products' });
+    const settings = await getSettings();
+    res.render('admin/product-form', { product: rows[0], variants, categories, settings, error: null, page: 'admin-products' });
   } catch (err) { next(err); }
 });
 
@@ -221,8 +241,8 @@ router.post('/products/:id', upload.single('photo'), async (req, res, next) => {
     for (let i = 0; i < variants.length; i++) {
       const v = variants[i];
       await client.query(
-        `INSERT INTO product_variants (product_id, label, price, in_stock, sort_order) VALUES ($1,$2,$3,$4,$5)`,
-        [req.params.id, v.label, v.price, v.in_stock, i]
+        `INSERT INTO product_variants (product_id, label, price, in_stock, status, sort_order) VALUES ($1,$2,$3,$4,$5,$6)`,
+        [req.params.id, v.label, v.price, v.status === 'in_stock', v.status, i]
       );
     }
     await client.query('COMMIT');
@@ -289,7 +309,7 @@ router.get('/settings', async (req, res, next) => {
 
 router.post('/settings', async (req, res, next) => {
   try {
-    const fields = ['farm_name', 'tagline', 'address_line1', 'address_line2', 'phone', 'email', 'hours', 'about_text', 'facebook_url', 'home_lede', 'products_intro', 'visit_note'];
+    const fields = ['farm_name', 'tagline', 'address_line1', 'address_line2', 'phone', 'email', 'hours', 'about_text', 'facebook_url', 'home_lede', 'products_intro', 'visit_note', 'coming_soon_label'];
     for (const f of fields) {
       if (typeof req.body[f] !== 'undefined') await setSetting(f, req.body[f]);
     }

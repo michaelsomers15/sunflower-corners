@@ -1,4 +1,5 @@
 <%- include('../partials/admin-header', { pageTitle: product ? 'Edit Product' : 'Add Product' }) %>
+<% var comingSoonLabel = (settings && settings.coming_soon_label && settings.coming_soon_label.trim()) || 'Coming Soon'; %>
 
 <div class="admin-header-row">
   <h1><%= product ? 'Edit Product' : 'Add Product' %></h1>
@@ -33,7 +34,7 @@
 
     <div class="field">
       <label>Sizes &amp; Pricing</label>
-      <span class="hint">Add one row per size you sell (e.g. "23 lb bag" and "45 lb bag"). Each size has its own price and its own In Stock / Sold Out status. One size is fine too — just leave a single row.</span>
+      <span class="hint">Add one row per size you sell (e.g. "23 lb bag" and "45 lb bag"). Each size has its own price and its own status — In Stock, Sold Out, or <%= comingSoonLabel %> (out right now but expected back, like before harvest). One size is fine too — just leave a single row.</span>
 
       <div id="variant-rows" style="display:flex; flex-direction:column; gap:10px; margin-top:6px;"></div>
 
@@ -75,24 +76,30 @@
 <script>
 // Seed data for existing sizes when editing; empty array (one blank row
 // added below) when creating a new product.
-var initialVariants = <%- JSON.stringify((variants || []).map(function(v) { return { label: v.label, price: Number(v.price), in_stock: v.in_stock }; })) %>;
+var initialVariants = <%- JSON.stringify((variants || []).map(function(v) { return { label: v.label, price: Number(v.price), status: v.status }; })) %>;
+var comingSoonLabel = <%- JSON.stringify(comingSoonLabel).replace(/</g, '\\u003c') %>;
 
 var rowsContainer = document.getElementById('variant-rows');
 
 function addVariantRow(data) {
-  data = data || { label: '', price: '', in_stock: true };
+  data = data || { label: '', price: '', status: 'in_stock' };
   var row = document.createElement('div');
   row.className = 'variant-row-edit';
   row.style.cssText = 'display:flex; gap:8px; align-items:center; flex-wrap:wrap;';
   row.innerHTML =
     '<input type="text" class="v-label" placeholder="e.g. 23 lb bag" style="flex:1; min-width:140px; font-family:Inter,sans-serif; font-size:0.92rem; padding:9px 10px; border:1.5px solid var(--fieldstone-dark); border-radius:3px; background:var(--fieldstone); color:var(--ink);">' +
     '<input type="number" class="v-price" step="0.01" min="0" placeholder="Price" style="width:110px; font-family:\'Space Mono\',monospace; font-size:0.9rem; padding:9px 10px; border:1.5px solid var(--fieldstone-dark); border-radius:3px; background:var(--fieldstone); color:var(--ink);">' +
-    '<label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; white-space:nowrap;"><input type="checkbox" class="v-instock" checked> In stock</label>' +
+    '<select class="v-status" aria-label="Stock status" style="font-family:Inter,sans-serif; font-size:0.88rem; padding:9px 10px; border:1.5px solid var(--fieldstone-dark); border-radius:3px; background:var(--fieldstone); color:var(--ink);">' +
+      '<option value="in_stock">In Stock</option>' +
+      '<option value="sold_out">Sold Out</option>' +
+      '<option value="coming_soon"></option>' +
+    '</select>' +
     '<button type="button" class="btn btn-danger btn-sm remove-variant-btn">Remove</button>';
 
   row.querySelector('.v-label').value = data.label || '';
   row.querySelector('.v-price').value = (data.price !== undefined && data.price !== null) ? data.price : '';
-  row.querySelector('.v-instock').checked = data.in_stock !== false;
+  row.querySelector('.v-status option[value="coming_soon"]').textContent = comingSoonLabel;
+  row.querySelector('.v-status').value = ['in_stock', 'sold_out', 'coming_soon'].indexOf(data.status) >= 0 ? data.status : 'in_stock';
   row.querySelector('.remove-variant-btn').addEventListener('click', function () {
     if (rowsContainer.children.length <= 1) {
       alert('A product needs at least one size.');
@@ -122,7 +129,7 @@ document.getElementById('product-form').addEventListener('submit', function (e) 
     data.push({
       label: label,
       price: parseFloat(row.querySelector('.v-price').value) || 0,
-      in_stock: row.querySelector('.v-instock').checked
+      status: row.querySelector('.v-status').value
     });
   });
   if (data.length === 0) {
