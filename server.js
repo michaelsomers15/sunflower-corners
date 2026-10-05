@@ -6,7 +6,7 @@ const helmet = require('helmet');
 const methodOverride = require('method-override');
 const path = require('path');
 
-const { pool, ensureSchema, getSettings } = require('./db/pool');
+const { pool, ensureSchema, seedStarterPicks, getSettings } = require('./db/pool');
 const publicRoutes = require('./routes/public');
 const adminRoutes = require('./routes/admin');
 
@@ -62,6 +62,7 @@ app.use((err, req, res, next) => {
 
 ensureSchema()
   .then(async () => {
+    await seedStarterPicks();
     await getSettings(); // warms up / confirms DB connectivity on boot
     app.listen(PORT, () => console.log(`Sunflower Corners running on port ${PORT}`));
   })

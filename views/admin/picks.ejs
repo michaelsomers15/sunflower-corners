@@ -1,0 +1,86 @@
+<%- include('../partials/admin-header', { pageTitle: 'Amazon Picks' }) %>
+
+<div class="admin-header-row">
+  <div>
+    <h1 style="margin-bottom:2px;">Amazon Picks</h1>
+    <p style="color: var(--ink-soft); margin:0;">Recommended items shown on the public <a href="/picks" target="_blank">Our Picks</a> page. Each one links to Amazon with your Associate tag added automatically.</p>
+  </div>
+  <a href="/admin/picks/new" class="btn btn-primary">+ Add Pick</a>
+</div>
+
+<% if (!settings.amazon_tag) { %>
+  <div class="alert alert-error">
+    <strong>Your Amazon Associate tag isn't set yet</strong>, so these links won't earn commission. Add it under <a href="/admin/settings#amazon_tag">Site Settings</a> (it looks like <span class="mono">yourname-20</span>).
+  </div>
+<% } %>
+
+<div class="card">
+  <% if (picks.length === 0) { %>
+    <div class="card-pad"><div class="empty-state">No picks yet. Click "Add Pick" to recommend your first item.</div></div>
+  <% } else { %>
+    <table class="data-table">
+      <thead>
+        <tr><th>Photo</th><th>Item</th><th>Section</th><th>Sort</th><th>Visible</th><th>Updated</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% picks.forEach(function(pk) { %>
+          <tr id="pick-<%= pk.id %>" class="<%= pk.visible ? '' : 'row-hidden' %>">
+            <td>
+              <% if (pk.has_photo) { %>
+                <img class="thumb" src="/pick-image/<%= pk.id %>" alt="">
+              <% } else { %>
+                <span class="thumb-placeholder"></span>
+              <% } %>
+            </td>
+            <td>
+              <strong><%= pk.title %></strong><br>
+              <a href="<%= pk.href %>" target="_blank" rel="sponsored noopener" class="mono" style="font-size:0.75rem;"><%= pk.isAmazon ? 'Test link on Amazon' : 'Test link' %> &#8599;</a>
+            </td>
+            <td><%= pk.section %></td>
+            <td class="mono"><%= pk.sort_order %></td>
+            <td>
+              <button type="button" class="pill-toggle <%= pk.visible ? 'visible' : 'hidden' %>" data-id="<%= pk.id %>" onclick="togglePick(this)">
+                <%= pk.visible ? 'Visible' : 'Hidden' %>
+              </button>
+            </td>
+            <td class="mono" style="font-size:0.78rem; color: var(--ink-soft);"><%= formatLocal(pk.updated_at) %></td>
+            <td>
+              <div class="row-actions">
+                <a href="/admin/picks/<%= pk.id %>/edit" class="btn btn-dark btn-sm">Edit</a>
+                <form method="POST" action="/admin/picks/<%= pk.id %>/delete" onsubmit="return confirm('Delete this pick? This cannot be undone.');">
+                  <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<script>
+async function togglePick(btn) {
+  const id = btn.dataset.id;
+  btn.disabled = true;
+  try {
+    const res = await fetch('/admin/picks/' + id + '/toggle-visible', { method: 'POST' });
+    if (!res.ok) throw new Error('Request failed');
+    const data = await res.json();
+    const row = document.getElementById('pick-' + id);
+    if (data.visible) {
+      btn.classList.remove('hidden'); btn.classList.add('visible'); btn.textContent = 'Visible';
+      if (row) row.classList.remove('row-hidden');
+    } else {
+      btn.classList.remove('visible'); btn.classList.add('hidden'); btn.textContent = 'Hidden';
+      if (row) row.classList.add('row-hidden');
+    }
+  } catch (e) {
+    alert('Could not update visibility. Please try again.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+</script>
+
+<%- include('../partials/admin-footer') %>

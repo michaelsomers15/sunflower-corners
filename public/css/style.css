@@ -104,6 +104,14 @@ nav.main-nav a {
 nav.main-nav a:hover { background: rgba(223,162,47,0.16); color: var(--sunflower-gold); }
 nav.main-nav a.active { background: var(--sunflower-gold); color: var(--barn-green); }
 
+/* Phones: nav drops below the logo as a full-width row of links instead of
+   stacking one-per-line beside it. */
+@media (max-width: 640px) {
+  .site-header .wrap { flex-wrap: wrap; }
+  nav.main-nav { width: 100%; justify-content: center; gap: 2px; }
+  nav.main-nav a { font-size: 0.88rem; padding: 7px 10px; }
+}
+
 /* ---------- Hero ---------- */
 
 .hero {
@@ -187,7 +195,7 @@ section.block.tight { padding: 36px 0; }
 section.block.alt { background: var(--paper); }
 
 .section-head { margin-bottom: 32px; }
-.section-head .kicker {
+.section-head .kicker, .picks-banner .kicker {
   font-family: 'Space Mono', monospace;
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -462,3 +470,33 @@ form.stacked-form .form-actions { display: flex; gap: 12px; margin-top: 6px; }
 .login-card .sub { text-align: center; color: var(--ink-soft); font-size: 0.88rem; margin-bottom: 24px; }
 
 .badge-count { font-family: 'Space Mono', monospace; font-size: 0.75rem; background: var(--fieldstone-dark); padding: 2px 9px; border-radius: 20px; color: var(--barn-wood); }
+
+/* ---------- Amazon affiliate "Our Picks" ---------- */
+
+a.pick-card { text-decoration: none; color: inherit; transition: transform 0.15s ease, box-shadow 0.15s ease; }
+a.pick-card:hover { transform: translateY(-2px); box-shadow: 0 2px 0 rgba(42,32,21,0.08), 0 12px 28px rgba(42,32,21,0.14); }
+a.pick-card:focus-visible { outline: 3px solid var(--sunflower-gold); outline-offset: 2px; }
+/* No-photo picks get a short striped band with a stamp instead of a tall
+   4:3 placeholder, so cards without photos stay compact. */
+.tag-photo-placeholder.pick-placeholder { aspect-ratio: 16 / 6; }
+.pick-placeholder span {
+  font-family: 'Space Mono', monospace; font-weight: 700; font-size: 0.72rem;
+  text-transform: uppercase; letter-spacing: 0.09em; color: var(--sunflower-gold-deep);
+  background: var(--paper); padding: 5px 10px; border: 2px solid currentColor; border-radius: 2px;
+  transform: rotate(-4deg);
+}
+.pick-cta {
+  font-family: 'Space Mono', monospace; font-weight: 700; font-size: 0.8rem;
+  text-transform: uppercase; letter-spacing: 0.06em; color: var(--sunflower-gold-deep);
+}
+a.pick-card:hover .pick-cta { color: var(--barn-green); }
+.affiliate-note { font-size: 0.82rem; color: var(--ink-soft); font-style: italic; margin-top: 6px; }
+.affiliate-foot { margin: 18px 0 0; opacity: 0.8; }
+
+.picks-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap;
+  background: var(--paper); border: 1px solid var(--fieldstone-dark); border-left: 6px solid var(--sunflower-gold);
+  padding: 22px 26px; box-shadow: var(--shadow);
+}
+.picks-banner h2 { margin: 4px 0 6px; }
+.picks-banner p { margin: 0; color: var(--ink-soft); }

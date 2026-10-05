@@ -15,7 +15,8 @@ stored directly in Postgres (no third-party file storage to manage).
 ## 1. What's included
 
 - **Public site:** Home, Products (grouped by category, price, description,
-  photo, In Stock / Sold Out / Coming Soon status), Our Farm (about), Visit & Contact
+  photo, In Stock / Sold Out / Coming Soon status), Our Picks (Amazon
+  affiliate recommendations), Our Farm (about), Visit & Contact
   (address, hours, phone, map link).
 - **Multiple sizes per product** — a product like Oats can carry more than
   one size/bag (e.g. "23 lb bag" and "45 lb bag"), each with its own price
@@ -31,6 +32,9 @@ stored directly in Postgres (no third-party file storage to manage).
     deleting it; it stays in the dashboard so it's easy to bring back later
   - Full product CRUD with photo upload (auto-resized/compressed) and an
     "Add another size" button on the product form for multi-size items
+  - **Amazon Picks** — recommended bird houses, feeders, garden supplies,
+    etc., grouped into sections, each linking to Amazon with your Associate
+    tag added automatically (see section 4b)
   - Category management, including inline rename/reorder
   - Site settings (name, tagline, address, hours, phone, email, about text,
     and the homepage/products/visit page copy)
@@ -139,6 +143,32 @@ or "Remove" to drop one (a product always needs at least one size).
 Site Settings covers hours, address, phone, and all of the page copy — she
 can update seasonal hours or wording herself without touching code.
 
+## 4b. Amazon affiliate picks
+
+1. **Set your tag once:** Admin → Site Settings → **Amazon Associate tag**
+   (your tracking ID from Associates Central, e.g. `yourname-20`). Until it's
+   set, the Amazon Picks screen shows a red reminder and links earn nothing.
+2. **Add a pick:** Admin → Amazon Picks → **+ Add Pick**. Paste a link from
+   Amazon (SiteStripe "Get Link → Text" is easiest, but any amazon.com
+   product or search link works since the tag is added for you), give it a
+   name, a section (e.g. "Bird Houses & Feeders"), and a sentence on why you
+   recommend it.
+3. **Starter picks:** the site ships with 10 starter picks (bird houses,
+   feeders, gardening, maple tapping) that link to Amazon *search results*.
+   Swap any of them for a specific product link, hide them, or delete them;
+   deleted starter picks never come back.
+
+Amazon Associates rules this site follows for you:
+- The required disclosure ("As an Amazon Associate I earn from qualifying
+  purchases.") is shown on the Our Picks page and in the footer of every page.
+- No prices are shown (Amazon doesn't allow hand-copied prices).
+- Links are marked `rel="sponsored"` for search engines.
+
+Things to do yourself: use your **own** photos (don't save and re-upload
+Amazon's product images), and don't put affiliate links in emails or
+printed flyers, which Amazon doesn't allow. Amazon also closes Associate
+accounts that don't make 3 qualifying sales within the first 180 days.
+
 ## 5. Notes on data & photos
 
 - Product photos are stored directly in Postgres (resized to a 1200px-wide
@@ -155,8 +185,10 @@ sunflower-corners/
   server.js              Entry point
   db/
     schema.sql            Table definitions (auto-applied on boot)
-    pool.js                Postgres pool + settings helper
+    pool.js                Postgres pool + settings helper + starter picks
     seed.js                 One-time seed script
+  lib/
+    affiliate.js           Amazon link tagging + URL safety checks
   middleware/
     auth.js                Session-based admin route guard
     localTime.js            UTC -> Central Time formatting helper

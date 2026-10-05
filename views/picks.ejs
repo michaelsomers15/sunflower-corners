@@ -1,0 +1,53 @@
+<%- include('partials/header', { pageTitle: 'Our Picks' }) %>
+
+<section class="block tight">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">Recommended on Amazon</span>
+      <h1>Our picks for the birds &amp; the garden</h1>
+      <p style="color: var(--ink-soft); max-width: 60ch;"><%= settings.picks_intro %></p>
+      <p class="affiliate-note">As an Amazon Associate I earn from qualifying purchases. Links open Amazon in a new tab; prices and availability are set by Amazon.</p>
+    </div>
+  </div>
+</section>
+
+<% if (sections.length === 0) { %>
+  <section class="block">
+    <div class="wrap">
+      <div class="empty-state">No picks listed yet. Check back soon.</div>
+    </div>
+  </section>
+<% } %>
+
+<% sections.forEach(function(sec) { %>
+  <section class="block tight">
+    <div class="wrap">
+      <div class="category-label">
+        <h2><%= sec.name %></h2>
+        <span class="rule"></span>
+        <span class="badge-count"><%= sec.picks.length %> pick<%= sec.picks.length === 1 ? '' : 's' %></span>
+      </div>
+      <div class="product-grid">
+        <% sec.picks.forEach(function(pk) { %>
+          <a class="tag-card pick-card" href="<%= pk.href %>" target="_blank" rel="sponsored noopener" referrerpolicy="strict-origin-when-cross-origin">
+            <% if (pk.has_photo) { %>
+              <img class="tag-photo" src="/pick-image/<%= pk.id %>" alt="<%= pk.title %>" loading="lazy">
+            <% } else { %>
+              <div class="tag-photo-placeholder pick-placeholder" aria-hidden="true"><span><%= pk.isAmazon ? 'On Amazon' : 'Recommended' %></span></div>
+            <% } %>
+            <div class="tag-body">
+              <span class="tag-category"><%= sec.name %></span>
+              <h3><%= pk.title %></h3>
+              <p class="tag-desc"><%= pk.description %></p>
+              <div class="tag-footer">
+                <span class="pick-cta"><%= pk.isAmazon ? 'View on Amazon' : 'View item' %> &#8599;</span>
+              </div>
+            </div>
+          </a>
+        <% }); %>
+      </div>
+    </div>
+  </section>
+<% }); %>
+
+<%- include('partials/footer') %>

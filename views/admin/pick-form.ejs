@@ -1,0 +1,69 @@
+<%- include('../partials/admin-header', { pageTitle: pick && pick.id ? 'Edit Pick' : 'Add Pick' }) %>
+
+<div class="admin-header-row">
+  <h1><%= pick && pick.id ? 'Edit Pick' : 'Add Pick' %></h1>
+</div>
+
+<% if (error) { %><div class="alert alert-error"><%= error %></div><% } %>
+
+<div class="card card-pad">
+  <form class="stacked-form" method="POST"
+        action="<%= pick && pick.id ? '/admin/picks/' + pick.id : '/admin/picks' %>"
+        enctype="multipart/form-data">
+
+    <div class="field">
+      <label for="title">Item name</label>
+      <input type="text" id="title" name="title" required maxlength="150" value="<%= pick ? pick.title : '' %>" placeholder="e.g. Cedar Bluebird House">
+    </div>
+
+    <div class="field">
+      <label for="url">Amazon link</label>
+      <input type="url" id="url" name="url" required value="<%= pick ? pick.url : '' %>" placeholder="https://www.amazon.com/dp/... or https://amzn.to/...">
+      <span class="hint">Easiest: while logged in to Amazon Associates, open the product on Amazon and click <strong>Get Link → Text</strong> in the SiteStripe bar at the top, then paste it here. A plain amazon.com product or search link also works, since your Associate tag is added automatically.</span>
+    </div>
+
+    <div class="field">
+      <label for="section">Section</label>
+      <input type="text" id="section" name="section" list="section-names" maxlength="100" value="<%= pick ? pick.section : '' %>" placeholder="e.g. Bird Houses & Feeders">
+      <datalist id="section-names">
+        <% sectionNames.forEach(function(n) { %><option value="<%= n %>"><% }); %>
+      </datalist>
+      <span class="hint">Picks are grouped under this heading on the public page. Pick an existing one from the list or type a new one.</span>
+    </div>
+
+    <div class="field">
+      <label for="description">Why you recommend it</label>
+      <textarea id="description" name="description" rows="3" placeholder="One or two sentences, in your own words."><%= pick ? pick.description : '' %></textarea>
+      <span class="hint">Don't include a price. Amazon prices change constantly and Associates rules don't allow posting them by hand.</span>
+    </div>
+
+    <div class="field">
+      <label for="photo">Photo (optional)</label>
+      <% if (pick && pick.id && pick.has_photo) { %>
+        <img src="/pick-image/<%= pick.id %>" alt="" style="width:140px; border-radius:4px; border:1px solid var(--fieldstone-dark); margin-bottom:8px;">
+        <label class="checkbox-row"><input type="checkbox" name="remove_photo"> Remove current photo</label>
+      <% } %>
+      <input type="file" id="photo" name="photo" accept="image/png,image/jpeg,image/webp,image/gif">
+      <span class="hint">Use your <strong>own</strong> photo (e.g. the bird house hanging at the farm). Amazon's rules don't allow saving and re-uploading their product photos. Without a photo, the card shows the item name instead.</span>
+    </div>
+
+    <div class="field">
+      <label for="sort_order">Sort order <span class="hint">(lower numbers show first)</span></label>
+      <input type="number" id="sort_order" name="sort_order" value="<%= pick ? pick.sort_order : 0 %>">
+    </div>
+
+    <div class="field">
+      <label class="checkbox-row">
+        <input type="checkbox" name="visible" <%= (!pick || pick.visible) ? 'checked' : '' %>>
+        Visible on public site
+      </label>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary"><%= pick && pick.id ? 'Save Changes' : 'Add Pick' %></button>
+      <a href="/admin/picks" class="btn btn-outline" style="color: var(--barn-green); border-color: var(--fieldstone-dark);">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<%- include('../partials/admin-footer') %>

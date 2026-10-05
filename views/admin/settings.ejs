@@ -5,6 +5,7 @@
 </div>
 
 <% if (saved) { %><div class="alert alert-success">Settings saved.</div><% } %>
+<% if (typeof error !== 'undefined' && error) { %><div class="alert alert-error"><%= error %></div><% } %>
 
 <div class="card card-pad">
   <form class="stacked-form" method="POST" action="/admin/settings" style="max-width: 700px;">
@@ -68,6 +69,18 @@
       <label for="coming_soon_label">"Coming soon" status wording</label>
       <input type="text" id="coming_soon_label" name="coming_soon_label" maxlength="30" value="<%= settings.coming_soon_label %>" placeholder="Coming Soon">
       <span class="hint">What the third stock status says on product tags — e.g. "Coming Soon", "Back Soon", "Harvesting Soon". Keep it short; it's printed on the stamp. Leave blank for "Coming Soon".</span>
+    </div>
+
+    <div class="field">
+      <label for="amazon_tag">Amazon Associate tag</label>
+      <input type="text" id="amazon_tag" name="amazon_tag" maxlength="64" value="<%= settings.amazon_tag %>" placeholder="e.g. sunflowercorn-20" autocomplete="off">
+      <span class="hint">Your tracking ID from Amazon Associates Central (top-right corner, usually ends in "-20"). It's added to every amazon.com link on the Our Picks page so purchases are credited to you.</span>
+    </div>
+
+    <div class="field">
+      <label for="picks_intro">"Our Picks" page intro</label>
+      <textarea id="picks_intro" name="picks_intro" rows="2"><%= settings.picks_intro %></textarea>
+      <span class="hint">Shown at the top of the Our Picks page. The required Amazon disclosure is always shown beneath it automatically.</span>
     </div>
 
     <div class="field">

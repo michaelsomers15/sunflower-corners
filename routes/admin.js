@@ -7,6 +7,7 @@ const rateLimit = require('express-rate-limit');
 const { pool, getSettings, setSetting } = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
 const { formatLocal } = require('../middleware/localTime');
+const { isSafeUrl, isAmazonUrl, withAffiliateTag, TAG_FORMAT } = require('../lib/affiliate');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -298,20 +299,155 @@ router.post('/categories/:id/delete', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ---------- Amazon affiliate "Our Picks" ----------
+
+async function processPhoto(file) {
+  if (!file) return null;
+  return sharp(file.buffer).resize({ width: 1200, withoutEnlargement: true }).jpeg({ quality: 82 }).toBuffer();
+}
+
+function pickFromBody(body) {
+  return {
+    section: String(body.section || '').trim().slice(0, 100) || 'Recommended',
+    title: String(body.title || '').trim().slice(0, 150),
+    description: String(body.description || '').trim(),
+    url: String(body.url || '').trim(),
+    visible: body.visible === 'on',
+    sort_order: Number.parseInt(body.sort_order, 10) || 0
+  };
+}
+
+function validatePick(pick) {
+  if (!pick.title) return 'Please enter a name for the item.';
+  if (!isSafeUrl(pick.url)) return 'Please paste a full link starting with https:// (copy it from the Amazon page or the SiteStripe bar).';
+  return null;
+}
+
+async function renderPickForm(res, pick, error) {
+  const settings = await getSettings();
+  const { rows: sections } = await pool.query('SELECT DISTINCT section FROM affiliate_links ORDER BY section');
+  res.render('admin/pick-form', {
+    pick, error, settings, sectionNames: sections.map((r) => r.section), page: 'admin-picks'
+  });
+}
+
+router.get('/picks', async (req, res, next) => {
+  try {
+    const settings = await getSettings();
+    const { rows } = await pool.query(
+      `SELECT id, section, title, url, visible, sort_order, updated_at, (photo IS NOT NULL) AS has_photo
+       FROM affiliate_links ORDER BY section ASC, sort_order ASC, title ASC`
+    );
+    const picks = rows.map((r) => ({ ...r, href: withAffiliateTag(r.url, settings.amazon_tag), isAmazon: isAmazonUrl(r.url) }));
+    res.render('admin/picks', { picks, settings, formatLocal, page: 'admin-picks' });
+  } catch (err) { next(err); }
+});
+
+router.get('/picks/new', async (req, res, next) => {
+  try {
+    await renderPickForm(res, null, null);
+  } catch (err) { next(err); }
+});
+
+router.post('/picks', upload.single('photo'), async (req, res, next) => {
+  try {
+    const pick = pickFromBody(req.body);
+    const error = validatePick(pick);
+    if (error) return renderPickForm(res, { ...pick, id: null }, error);
+    const photo = await processPhoto(req.file);
+    await pool.query(
+      `INSERT INTO affiliate_links (section, title, description, url, visible, sort_order, photo, photo_mime)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [pick.section, pick.title, pick.description, pick.url, pick.visible, pick.sort_order, photo, photo ? 'image/jpeg' : null]
+    );
+    res.redirect('/admin/picks');
+  } catch (err) { next(err); }
+});
+
+router.get('/picks/:id/edit', async (req, res, next) => {
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, section, title, description, url, visible, sort_order, (photo IS NOT NULL) AS has_photo FROM affiliate_links WHERE id = $1',
+      [req.params.id]
+    );
+    if (!rows.length) return res.status(404).send('Pick not found');
+    await renderPickForm(res, rows[0], null);
+  } catch (err) { next(err); }
+});
+
+router.post('/picks/:id', upload.single('photo'), async (req, res, next) => {
+  try {
+    const pick = pickFromBody(req.body);
+    const error = validatePick(pick);
+    if (error) {
+      const { rows } = await pool.query('SELECT (photo IS NOT NULL) AS has_photo FROM affiliate_links WHERE id = $1', [req.params.id]);
+      return renderPickForm(res, { ...pick, id: req.params.id, has_photo: rows.length && rows[0].has_photo }, error);
+    }
+    const fields = [pick.section, pick.title, pick.description, pick.url, pick.visible, pick.sort_order];
+    let query = `UPDATE affiliate_links SET section=$1, title=$2, description=$3, url=$4, visible=$5, sort_order=$6, updated_at=now()`;
+    const photo = await processPhoto(req.file);
+    if (photo) {
+      query += `, photo=$7, photo_mime='image/jpeg' WHERE id=$8`;
+      fields.push(photo, req.params.id);
+    } else if (req.body.remove_photo === 'on') {
+      query += `, photo=NULL, photo_mime=NULL WHERE id=$7`;
+      fields.push(req.params.id);
+    } else {
+      query += ` WHERE id=$7`;
+      fields.push(req.params.id);
+    }
+    await pool.query(query, fields);
+    res.redirect('/admin/picks');
+  } catch (err) { next(err); }
+});
+
+router.post('/picks/:id/toggle-visible', async (req, res, next) => {
+  try {
+    const { rows } = await pool.query(
+      'UPDATE affiliate_links SET visible = NOT visible, updated_at = now() WHERE id = $1 RETURNING visible',
+      [req.params.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Not found' });
+    res.json({ visible: rows[0].visible });
+  } catch (err) { next(err); }
+});
+
+router.post('/picks/:id/delete', async (req, res, next) => {
+  try {
+    await pool.query('DELETE FROM affiliate_links WHERE id = $1', [req.params.id]);
+    res.redirect('/admin/picks');
+  } catch (err) { next(err); }
+});
+
 // ---------- Site settings ----------
 
 router.get('/settings', async (req, res, next) => {
   try {
     const settings = await getSettings();
-    res.render('admin/settings', { settings, saved: req.query.saved === '1', page: 'admin-settings' });
+    res.render('admin/settings', { settings, saved: req.query.saved === '1', error: null, page: 'admin-settings' });
   } catch (err) { next(err); }
 });
 
 router.post('/settings', async (req, res, next) => {
   try {
-    const fields = ['farm_name', 'tagline', 'address_line1', 'address_line2', 'phone', 'email', 'hours', 'about_text', 'facebook_url', 'home_lede', 'products_intro', 'visit_note', 'coming_soon_label'];
+    const fields = ['farm_name', 'tagline', 'address_line1', 'address_line2', 'phone', 'email', 'hours', 'about_text', 'facebook_url', 'home_lede', 'products_intro', 'visit_note', 'coming_soon_label', 'picks_intro'];
     for (const f of fields) {
       if (typeof req.body[f] !== 'undefined') await setSetting(f, req.body[f]);
+    }
+    // Associate tag: trimmed and only saved if it looks like a real tag
+    // (letters, numbers, dashes — e.g. "sunflowercorn-20"), so a stray
+    // space or pasted URL can't break every Amazon link on the site.
+    if (typeof req.body.amazon_tag !== 'undefined') {
+      const tag = String(req.body.amazon_tag).trim();
+      if (tag === '' || TAG_FORMAT.test(tag)) {
+        await setSetting('amazon_tag', tag);
+      } else {
+        const settings = await getSettings();
+        return res.render('admin/settings', {
+          settings: { ...settings, amazon_tag: tag }, saved: false, page: 'admin-settings',
+          error: 'Amazon Associate tag should look like "yourname-20" (letters, numbers, and dashes only). Other settings were saved; the tag was not.'
+        });
+      }
     }
     res.redirect('/admin/settings?saved=1');
   } catch (err) { next(err); }

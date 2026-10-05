@@ -86,3 +86,24 @@ CREATE TABLE IF NOT EXISTS site_settings (
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
 CREATE INDEX IF NOT EXISTS idx_products_visible ON products(visible);
 CREATE INDEX IF NOT EXISTS idx_variants_product ON product_variants(product_id);
+
+-- Amazon affiliate "Our Picks" — recommended items (bird houses, feeders,
+-- garden supplies) that link out to Amazon. The site's Associate tag is
+-- added to amazon.com links at render time (see lib/affiliate.js), so links
+-- can be pasted in plain. No prices are stored: Amazon's Associates rules
+-- don't allow showing prices that aren't pulled live from Amazon.
+CREATE TABLE IF NOT EXISTS affiliate_links (
+  id SERIAL PRIMARY KEY,
+  section VARCHAR(100) NOT NULL DEFAULT 'Recommended',   -- e.g. "Bird Houses & Feeders"
+  title VARCHAR(150) NOT NULL,
+  description TEXT,
+  url TEXT NOT NULL,
+  photo BYTEA,
+  photo_mime VARCHAR(50),
+  visible BOOLEAN NOT NULL DEFAULT true,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_affiliate_links_visible ON affiliate_links(visible);
